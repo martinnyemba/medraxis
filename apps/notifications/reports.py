@@ -127,6 +127,7 @@ REPORT_REGISTRY = {
 def _expense_summary(parameters, organization):
     """Total expenses per category over an optional date range."""
     from django.db.models import Sum
+
     from apps.finance.models import Expense
 
     qs = Expense.objects.all()

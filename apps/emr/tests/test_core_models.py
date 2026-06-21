@@ -12,15 +12,14 @@ from apps.emr.models import (
     ConceptDatatype,
     Drug,
     DrugIngredient,
-    OrderFrequency,
     Patient,
     Person,
     Relationship,
     RelationshipType,
+    Visit,
     VisitAttribute,
     VisitAttributeType,
     VisitType,
-    Visit,
 )
 from apps.users.models import User
 

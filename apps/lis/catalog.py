@@ -121,6 +121,9 @@ class TestProfileMember(models.Model):
         ordering = ["sort_weight"]
         unique_together = ("profile", "lab_test")
 
+    def __str__(self):
+        return f"{self.lab_test_id} in profile {self.profile_id}"
+
 
 class ReportTemplate(BaseOpenmrsMetadata):
     """A formatted report layout for a test (methodology, interpretation, notes).

@@ -11,7 +11,6 @@ Expenses, supplier payments and (via services) sales/purchases post into these,
 so the platform tracks not just *what was sold* but *where the money is* and
 *who owes whom*. See ``docs/business_ops_research.md``.
 """
-from decimal import Decimal
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType

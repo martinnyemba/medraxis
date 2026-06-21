@@ -1,0 +1,24 @@
+[tool.ruff]
+# Match the project's wrapping style; keep linting signal high, noise low.
+line-length = 100
+target-version = "py311"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes (real bugs), I: import sorting, UP: pyupgrade,
+# B: bugbear, C4: comprehensions, DJ: Django-specific checks.
+select = ["E", "W", "F", "I", "UP", "B", "C4", "DJ"]
+ignore = [
+    "E501",   # line length is handled by the formatter, not enforced hard
+    "B008",   # function calls in argument defaults (common/intentional in DRF)
+    # Stylistic preferences (can be enabled later without behaviour change):
+    "B904",   # raise ... from in except — nice-to-have, not enforced yet
+    "B905",   # zip() strict= — nice-to-have
+    "E702",   # multiple statements on a line (used compactly in tests)
+    "DJ012",  # model inner-class/field/manager ordering — stylistic
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Settings use star-imports by design; tests may have long literals.
+"config/settings/*" = ["F403", "F405"]
+"**/tests/*" = ["E402"]

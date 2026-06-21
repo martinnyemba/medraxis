@@ -2,8 +2,8 @@ from apps.pos.api.views import (
     CustomerViewSet,
     PaymentViewSet,
     QuotationViewSet,
-    SaleViewSet,
     SalesReturnViewSet,
+    SaleViewSet,
 )
 
 

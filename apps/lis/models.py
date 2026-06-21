@@ -271,6 +271,7 @@ class AnalyzerMessage(TimeStampedModel):
 # Django registers them under the ``lis`` app. (Models use string FK refs to
 # avoid import cycles.)
 # ---------------------------------------------------------------------------
+from apps.lis.automation import AutoVerificationRule  # noqa: E402,F401
 from apps.lis.catalog import (  # noqa: E402,F401
     ReferenceRange,
     ReportTemplate,
@@ -287,6 +288,7 @@ from apps.lis.clients import (  # noqa: E402,F401
     ReferenceLab,
     ReferringDoctor,
 )
+from apps.lis.delivery import ReportDelivery  # noqa: E402,F401
 from apps.lis.microbiology import (  # noqa: E402,F401
     Antibiotic,
     MicrobiologyResult,
@@ -294,5 +296,3 @@ from apps.lis.microbiology import (  # noqa: E402,F401
     SensitivityResult,
 )
 from apps.lis.qc import QCMaterial, QCResult  # noqa: E402,F401
-from apps.lis.automation import AutoVerificationRule  # noqa: E402,F401
-from apps.lis.delivery import ReportDelivery  # noqa: E402,F401

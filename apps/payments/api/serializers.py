@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from apps.pos.models import Sale
 from apps.payments import models as m
+from apps.pos.models import Sale
 
 
 class PaymentGatewaySerializer(serializers.ModelSerializer):

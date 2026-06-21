@@ -24,7 +24,7 @@ from apps.lis import models as lis
 from apps.notifications.models import NotificationTemplate
 from apps.tenancy.context import organization_context
 from apps.tenancy.models import Membership, Organization
-from apps.users.models import Privilege, Provider, Role, User
+from apps.users.models import Privilege, Role, User
 
 PRIVILEGES = [
     "View Patients", "Add Patients", "Edit Patients",

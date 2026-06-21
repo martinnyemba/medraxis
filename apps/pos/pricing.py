@@ -24,6 +24,7 @@ def _client_test_price(client, lab_test):
         return None
     from django.db.models import Q
     from django.utils import timezone
+
     from apps.lis.models import PriceListItem
 
     today = timezone.now().date()

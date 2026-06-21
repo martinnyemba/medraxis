@@ -6,7 +6,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.inventory.services import InsufficientStock
-from apps.tenancy.mixins import TenantScopedQuerySetMixin
 from apps.pos import models as m
 from apps.pos import services
 from apps.pos.api.serializers import (
@@ -16,6 +15,7 @@ from apps.pos.api.serializers import (
     SaleSerializer,
     SalesReturnSerializer,
 )
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
 class CustomerViewSet(viewsets.ModelViewSet):

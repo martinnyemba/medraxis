@@ -1,5 +1,7 @@
 # Medraxis — Unified Healthcare Business Platform
 
+[![CI](https://github.com/martinnyemba/medraxis/actions/workflows/ci.yml/badge.svg)](https://github.com/martinnyemba/medraxis/actions/workflows/ci.yml)
+
 Medraxis is a **Django reimplementation inspired by the [OpenMRS](https://openmrs.org/)
 architecture**, extended into a single integrated platform for clinics,
 diagnostic centres, laboratories, pharmacies and medical businesses. It combines:
@@ -123,6 +125,34 @@ The suite covers the integrative workflows: lab result entry/verify/release →
 patient `Obs`, FEFO inventory issuing with rollback on shortage, POS totals
 (discount + GST) and stock-coupled sale completion, and patient-registration
 RBAC enforcement.
+
+## Continuous integration (CI/CD)
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
+
+| Job | What it checks |
+|---|---|
+| **Lint** | `ruff check` (pyflakes, import sorting, pyupgrade, bugbear, Django rules; config in `pyproject.toml`) |
+| **Tests (SQLite)** | migrations in sync (`makemigrations --check`), `manage.py check`, full test suite |
+| **Tests (PostgreSQL)** | migrate + seed + tests against Postgres 16 (the production DB path) |
+| **Docker build** | builds the production image from the `Dockerfile` |
+
+Lint and lint+tests locally:
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+python manage.py test apps
+```
+
+Run the production image (migrates, then serves via gunicorn):
+
+```bash
+docker build -t medraxis .
+docker run -p 8000:8000 \
+  -e DJANGO_SECRET_KEY=... -e DJANGO_ALLOWED_HOSTS=your.host \
+  -e DATABASE_URL=postgres://user:pass@db:5432/medraxis medraxis
+```
 
 ## Tech stack
 

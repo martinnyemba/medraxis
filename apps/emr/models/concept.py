@@ -138,6 +138,9 @@ class ConceptSetMembership(models.Model):
         ordering = ["sort_weight"]
         unique_together = ("concept_set", "member")
 
+    def __str__(self):
+        return f"{self.member_id} in set {self.concept_set_id}"
+
 
 class ConceptSource(BaseOpenmrsMetadata):
     """An external terminology (LOINC, SNOMED CT, ICD-10, CIEL, RxNorm)."""
@@ -182,6 +185,9 @@ class ConceptMapping(models.Model):
     class Meta:
         unique_together = ("concept", "reference_term", "map_type")
 
+    def __str__(self):
+        return f"{self.concept_id} {self.map_type} {self.reference_term_id}"
+
 
 class ConceptMapType(BaseOpenmrsMetadata):
     """A configurable mapping relationship (OpenMRS ``ConceptMapType``).
@@ -216,6 +222,9 @@ class ConceptReferenceTermMap(models.Model):
 
     class Meta:
         unique_together = ("term_a", "term_b", "map_type")
+
+    def __str__(self):
+        return f"{self.term_a_id} {self.map_type_id} {self.term_b_id}"
 
 
 class ConceptProposal(BaseOpenmrsData):

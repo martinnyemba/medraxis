@@ -9,7 +9,6 @@ The transparent rule engine behind "AI automation":
   human, honouring range/critical gates and a delta check.
 * :func:`apply_reflex` auto-orders a follow-up test on abnormality.
 """
-from datetime import date
 
 from django.db import transaction
 from django.utils import timezone

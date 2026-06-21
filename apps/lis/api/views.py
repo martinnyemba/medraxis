@@ -6,7 +6,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.emr.services import next_order_number
-from apps.tenancy.mixins import TenantScopedQuerySetMixin
 from apps.lis import models as m
 from apps.lis import services
 from apps.lis.api.serializers import (
@@ -19,6 +18,7 @@ from apps.lis.api.serializers import (
     SpecimenSerializer,
     TestOrderSerializer,
 )
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
 class LabSectionViewSet(viewsets.ModelViewSet):

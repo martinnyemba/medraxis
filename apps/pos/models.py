@@ -295,6 +295,9 @@ class QuotationLine(models.Model):
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
+    def __str__(self):
+        return self.description or (self.product and self.product.name) or "quotation line"
+
     @property
     def gross_amount(self):
         return self.quantity * self.unit_price
@@ -351,6 +354,9 @@ class SalesReturnLine(models.Model):
     description = models.CharField(max_length=255, blank=True, default="")
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return self.description or (self.product and self.product.name) or "return line"
 
     @property
     def line_total(self):

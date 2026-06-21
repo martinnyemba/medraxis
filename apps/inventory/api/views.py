@@ -5,7 +5,6 @@ from rest_framework.response import Response
 
 from apps.inventory import models as m
 from apps.inventory import services
-from apps.tenancy.mixins import TenantScopedQuerySetMixin
 from apps.inventory.api.serializers import (
     ProductCategorySerializer,
     ProductSerializer,
@@ -17,6 +16,7 @@ from apps.inventory.api.serializers import (
     SupplierSerializer,
     TaxRateSerializer,
 )
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
@@ -118,6 +118,7 @@ class PurchaseBillViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         from rest_framework import status as drf_status
         from rest_framework.response import Response as DRFResponse
+
         from apps.finance.services import create_purchase_bill
 
         ser = self.get_serializer(data=request.data)

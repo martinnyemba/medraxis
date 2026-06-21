@@ -3,7 +3,6 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.emr.models import (
-    CareSetting,
     Concept,
     ConceptClass,
     ConceptDatatype,
