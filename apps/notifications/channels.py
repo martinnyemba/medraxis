@@ -50,10 +50,34 @@ def deliver_in_app(notification):
     return "stored"
 
 
+def _load_whatsapp_backend():
+    path = getattr(settings, "NOTIFICATIONS_WHATSAPP_BACKEND", "")
+    if not path:
+        return _console_whatsapp
+    module_path, _, attr = path.rpartition(".")
+    return getattr(import_module(module_path), attr)
+
+
+def _console_whatsapp(to, body):  # pragma: no cover - dev backend
+    logger.info("WhatsApp to %s: %s", to, body)
+    return "console"
+
+
+def deliver_whatsapp(notification):
+    """Send via a pluggable WhatsApp Business API backend.
+
+    Configure ``NOTIFICATIONS_WHATSAPP_BACKEND`` (dotted path to a callable
+    ``send(to, body) -> str``); the default logs to the console for development.
+    """
+    backend = _load_whatsapp_backend()
+    return backend(notification.recipient_address, notification.body)
+
+
 CHANNELS = {
     "email": deliver_email,
     "sms": deliver_sms,
     "in_app": deliver_in_app,
+    "whatsapp": deliver_whatsapp,
 }
 
 

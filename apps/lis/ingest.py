@@ -56,12 +56,26 @@ def _record_result(test_order, analyte, msg, analyzer):
     result.units = msg.units or result.units
     result.reference_range = msg.reference_range or result.reference_range
     result.analyzer = analyzer
-    # services.enter_result computes the flag from reference ranges and saves.
+    # services.enter_result records the result in the ENTERED state. We override
+    # its flag with the demographic reference-range evaluation when available.
     services.enter_result(result, provider=None)
+    from apps.lis.automation_service import (
+        apply_reflex,
+        auto_verify_result,
+        flag_with_reference_range,
+    )
+    demographic_flag = flag_with_reference_range(result)
+    if demographic_flag != result.flag or (result.reference_range and not msg.reference_range):
+        result.flag = demographic_flag
+        result.save(update_fields=["flag", "reference_range"])
     # If the analyzer asserted a flag and we derived none, trust the instrument.
     if msg.flag and not result.flag:
         result.flag = msg.flag
         result.save(update_fields=["flag"])
+    # "AI automation": auto-verify in-range, delta-stable results and fire reflex
+    # orders on abnormality (both no-ops unless rules are configured).
+    auto_verify_result(result)
+    apply_reflex(result)
     return result
 
 

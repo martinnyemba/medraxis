@@ -38,5 +38,51 @@ class AnalyzerMessageAdmin(admin.ModelAdmin):
     readonly_fields = ("raw_payload", "log", "results_matched", "results_unmatched")
 
 
-for model in (m.LabSection, m.SpecimenType, m.Analyzer, m.Worklist):
+class SensitivityResultInline(admin.TabularInline):
+    model = m.SensitivityResult
+    extra = 1
+
+
+@admin.register(m.MicrobiologyResult)
+class MicrobiologyResultAdmin(admin.ModelAdmin):
+    list_display = ("test_order", "growth", "organism", "status")
+    list_filter = ("growth", "status")
+    inlines = [SensitivityResultInline]
+
+
+@admin.register(m.ReferenceRange)
+class ReferenceRangeAdmin(admin.ModelAdmin):
+    list_display = ("lab_test", "analyte", "sex", "age_min_days", "age_max_days",
+                    "low_normal", "hi_normal")
+    list_filter = ("sex",)
+
+
+@admin.register(m.QCResult)
+class QCResultAdmin(admin.ModelAdmin):
+    list_display = ("run_at", "qc_material", "measured_value", "z_score",
+                    "westgard_rule", "accepted")
+    list_filter = ("accepted", "westgard_rule")
+    date_hierarchy = "run_at"
+
+
+@admin.register(m.ReportDelivery)
+class ReportDeliveryAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "test_order", "channel", "recipient_type", "status")
+    list_filter = ("channel", "status", "recipient_type")
+
+
+@admin.register(m.CollectionAppointment)
+class CollectionAppointmentAdmin(admin.ModelAdmin):
+    list_display = ("scheduled_for", "patient", "collection_center",
+                    "is_home_collection", "status")
+    list_filter = ("status", "is_home_collection")
+    date_hierarchy = "scheduled_for"
+
+
+for model in (
+    m.LabSection, m.SpecimenType, m.Analyzer, m.Worklist,
+    m.TestMethod, m.TestProfile, m.ReportTemplate,
+    m.ReferringDoctor, m.Client, m.PriceList, m.CollectionCenter, m.ReferenceLab,
+    m.Organism, m.Antibiotic, m.QCMaterial, m.AutoVerificationRule,
+):
     admin.site.register(model)

@@ -72,6 +72,30 @@ class TestOrder(Order):
     laterality = models.CharField(max_length=20, blank=True, default="")
     clinical_history = models.TextField(blank=True, default="")
 
+    # FLabs-inspired commercial/operational context.
+    referring_doctor = models.ForeignKey(
+        "lis.ReferringDoctor", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    client = models.ForeignKey(
+        "lis.Client", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    collection_center = models.ForeignKey(
+        "lis.CollectionCenter", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    test_method = models.ForeignKey(
+        "lis.TestMethod", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    # Outsourcing to an external reference lab.
+    reference_lab = models.ForeignKey(
+        "lis.ReferenceLab", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    is_outsourced = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = "test order"
 
@@ -240,3 +264,35 @@ class AnalyzerMessage(TimeStampedModel):
 
     def __str__(self):
         return f"{self.protocol} message [{self.status}] ({self.results_matched} matched)"
+
+
+# ---------------------------------------------------------------------------
+# FLabs-inspired extensions. Defined in focused submodules and imported here so
+# Django registers them under the ``lis`` app. (Models use string FK refs to
+# avoid import cycles.)
+# ---------------------------------------------------------------------------
+from apps.lis.catalog import (  # noqa: E402,F401
+    ReferenceRange,
+    ReportTemplate,
+    TestMethod,
+    TestProfile,
+    TestProfileMember,
+)
+from apps.lis.clients import (  # noqa: E402,F401
+    Client,
+    CollectionAppointment,
+    CollectionCenter,
+    PriceList,
+    PriceListItem,
+    ReferenceLab,
+    ReferringDoctor,
+)
+from apps.lis.microbiology import (  # noqa: E402,F401
+    Antibiotic,
+    MicrobiologyResult,
+    Organism,
+    SensitivityResult,
+)
+from apps.lis.qc import QCMaterial, QCResult  # noqa: E402,F401
+from apps.lis.automation import AutoVerificationRule  # noqa: E402,F401
+from apps.lis.delivery import ReportDelivery  # noqa: E402,F401

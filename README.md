@@ -40,6 +40,7 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 | [`docs/api.md`](docs/api.md) | API reference, auth, conventions, workflow actions |
 | [`docs/platform_features.md`](docs/platform_features.md) | FHIR facade, HL7/ASTM interfacing, async notifications/reports, PDF printing, multi-tenancy |
 | [`docs/openmrs_coverage.md`](docs/openmrs_coverage.md) | Model-by-model coverage map vs. the OpenMRS Java domain model |
+| [`docs/flabs_research.md`](docs/flabs_research.md) | Reverse-engineered FLabs LIS analysis + gap closure (catalogue, B2B/branch, microbiology, QC, auto-verification, WhatsApp delivery) |
 | [`SKILLS.md`](SKILLS.md) | Engineering standards followed by this project |
 
 ## Project structure

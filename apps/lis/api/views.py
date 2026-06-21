@@ -106,6 +106,23 @@ class LabResultViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(result).data)
 
     @action(detail=True, methods=["post"])
+    def auto_verify(self, request, pk=None):
+        """Run the test's auto-verification rule on an entered result.
+
+        Returns whether it was auto-verified and fires reflex orders if abnormal.
+        """
+        from apps.lis.automation_service import apply_reflex, auto_verify_result
+
+        result = self.get_object()
+        verified = auto_verify_result(result)
+        reflex = apply_reflex(result)
+        return Response({
+            "auto_verified": verified,
+            "status": result.status,
+            "reflex_order": reflex.order_number if reflex else None,
+        })
+
+    @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
         result = self.get_object()
         if result.status != m.LabResult.Status.ENTERED:

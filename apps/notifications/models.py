@@ -31,6 +31,7 @@ class Notification(TimeStampedModel):
         EMAIL = "email", "Email"
         SMS = "sms", "SMS"
         IN_APP = "in_app", "In-app"
+        WHATSAPP = "whatsapp", "WhatsApp"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"

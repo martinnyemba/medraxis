@@ -176,6 +176,41 @@ class Command(BaseCommand):
                 "name": "Fasting Blood Glucose", "concept": concepts["glucose"],
                 "section": chem, "specimen_type": blood, "price": Decimal("80.00")},
         )
+        self._seed_flabs(concepts, haem)
+
+    # ---------------------------------------------------- FLabs extensions
+    def _seed_flabs(self, concepts, haem_section):
+        hb_test = lis.LabTest.objects.get(test_code="HB")
+        # Demographic (sex-specific) reference ranges for haemoglobin.
+        lis.ReferenceRange.objects.get_or_create(
+            lab_test=hb_test, analyte=concepts["hb"], sex="M",
+            defaults={"low_normal": 13, "hi_normal": 17, "low_critical": 7,
+                      "units": "g/dL", "text_range": "13 - 17 g/dL (M)"},
+        )
+        lis.ReferenceRange.objects.get_or_create(
+            lab_test=hb_test, analyte=concepts["hb"], sex="F",
+            defaults={"low_normal": 12, "hi_normal": 15, "low_critical": 7,
+                      "units": "g/dL", "text_range": "12 - 15 g/dL (F)"},
+        )
+        # An auto-verification rule for haemoglobin.
+        lis.AutoVerificationRule.objects.get_or_create(
+            name="Hb auto-verify", lab_test=hb_test,
+            defaults={"require_in_range": True, "block_on_critical": True,
+                      "delta_check_percent": 25},
+        )
+        # A referring doctor and a B2B client.
+        lis.ReferringDoctor.objects.get_or_create(
+            code="DR001", defaults={"name": "Dr. Mwansa", "specialty": "General"})
+        lis.Client.objects.get_or_create(
+            code="HOSP01", defaults={"name": "City Hospital",
+                                     "client_type": lis.Client.ClientType.HOSPITAL})
+        # Microbiology reference data.
+        for org in ["Escherichia coli", "Staphylococcus aureus", "Klebsiella pneumoniae"]:
+            lis.Organism.objects.get_or_create(name=org)
+        for ab, abbr in [("Amoxicillin", "AMX"), ("Ciprofloxacin", "CIP"),
+                         ("Ceftriaxone", "CRO")]:
+            lis.Antibiotic.objects.get_or_create(
+                name=ab, defaults={"abbreviation": abbr})
 
     # ----------------------------------------------------- inventory/billing
     def _seed_inventory_billing(self, concepts):
