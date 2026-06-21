@@ -12,6 +12,7 @@ from django.db import models
 
 from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata, TimeStampedModel
 from apps.emr.models import Order
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class LabSection(BaseOpenmrsMetadata):
@@ -71,11 +72,35 @@ class TestOrder(Order):
     laterality = models.CharField(max_length=20, blank=True, default="")
     clinical_history = models.TextField(blank=True, default="")
 
+    # FLabs-inspired commercial/operational context.
+    referring_doctor = models.ForeignKey(
+        "lis.ReferringDoctor", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    client = models.ForeignKey(
+        "lis.Client", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    collection_center = models.ForeignKey(
+        "lis.CollectionCenter", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    test_method = models.ForeignKey(
+        "lis.TestMethod", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    # Outsourcing to an external reference lab.
+    reference_lab = models.ForeignKey(
+        "lis.ReferenceLab", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="test_orders",
+    )
+    is_outsourced = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = "test order"
 
 
-class Specimen(BaseOpenmrsData):
+class Specimen(BaseOpenmrsData, TenantScopedModel):
     """A physical sample tracked by accession number through the lab."""
 
     class Status(models.TextChoices):
@@ -209,3 +234,65 @@ class Worklist(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class AnalyzerMessage(TimeStampedModel):
+    """An inbound raw message received from an analyzer, with its parse outcome.
+
+    Persisting the raw payload gives an auditable, replayable record of every
+    instrument transmission -- important when a result is queried clinically.
+    """
+
+    class Status(models.TextChoices):
+        RECEIVED = "RECEIVED", "Received"
+        PROCESSED = "PROCESSED", "Processed"
+        PARTIAL = "PARTIAL", "Partially processed"
+        FAILED = "FAILED", "Failed"
+
+    analyzer = models.ForeignKey(
+        Analyzer, on_delete=models.SET_NULL, null=True, blank=True, related_name="messages"
+    )
+    protocol = models.CharField(max_length=20, default="HL7")
+    raw_payload = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RECEIVED)
+    results_matched = models.PositiveIntegerField(default=0)
+    results_unmatched = models.PositiveIntegerField(default=0)
+    log = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.protocol} message [{self.status}] ({self.results_matched} matched)"
+
+
+# ---------------------------------------------------------------------------
+# FLabs-inspired extensions. Defined in focused submodules and imported here so
+# Django registers them under the ``lis`` app. (Models use string FK refs to
+# avoid import cycles.)
+# ---------------------------------------------------------------------------
+from apps.lis.automation import AutoVerificationRule  # noqa: E402,F401
+from apps.lis.catalog import (  # noqa: E402,F401
+    ReferenceRange,
+    ReportTemplate,
+    TestMethod,
+    TestProfile,
+    TestProfileMember,
+)
+from apps.lis.clients import (  # noqa: E402,F401
+    Client,
+    CollectionAppointment,
+    CollectionCenter,
+    PriceList,
+    PriceListItem,
+    ReferenceLab,
+    ReferringDoctor,
+)
+from apps.lis.delivery import ReportDelivery  # noqa: E402,F401
+from apps.lis.microbiology import (  # noqa: E402,F401
+    Antibiotic,
+    MicrobiologyResult,
+    Organism,
+    SensitivityResult,
+)
+from apps.lis.qc import QCMaterial, QCResult  # noqa: E402,F401

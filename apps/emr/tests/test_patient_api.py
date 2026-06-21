@@ -1,5 +1,4 @@
 """API tests for patient registration and RBAC enforcement."""
-from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from apps.emr.models import Patient, PatientIdentifierType

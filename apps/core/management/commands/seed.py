@@ -21,7 +21,10 @@ from apps.billing.models import BillableService
 from apps.emr import models as emr
 from apps.inventory import models as inv
 from apps.lis import models as lis
-from apps.users.models import Privilege, Provider, Role, User
+from apps.notifications.models import NotificationTemplate
+from apps.tenancy.context import organization_context
+from apps.tenancy.models import Membership, Organization
+from apps.users.models import Privilege, Role, User
 
 PRIVILEGES = [
     "View Patients", "Add Patients", "Edit Patients",
@@ -50,18 +53,52 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Seeding privileges & roles...")
         self._seed_rbac()
+        self.stdout.write("Seeding organization (tenant)...")
+        organization = self._seed_tenancy()
+        self.stdout.write("Seeding notification templates...")
+        self._seed_templates()
         self.stdout.write("Seeding clinical metadata...")
         concepts = self._seed_concepts()
-        self.stdout.write("Seeding locations & encounter types...")
-        self._seed_metadata()
-        self.stdout.write("Seeding lab catalogue...")
-        self._seed_lab(concepts)
-        self.stdout.write("Seeding inventory & billing...")
-        self._seed_inventory_billing(concepts)
-        if options["demo"]:
-            self.stdout.write("Seeding demo dataset...")
-            self._seed_demo(concepts)
+        # Tenant-scoped data (locations, products, accounts, demo records) is
+        # owned by the demo organization so members of that tenant can see it.
+        with organization_context(organization):
+            self.stdout.write("Seeding locations & encounter types...")
+            self._seed_metadata()
+            self.stdout.write("Seeding lab catalogue...")
+            self._seed_lab(concepts)
+            self.stdout.write("Seeding inventory & billing...")
+            self._seed_inventory_billing(concepts)
+            self.stdout.write("Seeding finance accounts & expense categories...")
+            self._seed_finance()
+            if options["demo"]:
+                self.stdout.write("Seeding demo dataset...")
+                self._seed_demo(concepts)
         self.stdout.write(self.style.SUCCESS("Seeding complete."))
+
+    # -------------------------------------------------------------- tenancy
+    def _seed_tenancy(self):
+        organization, _ = Organization.objects.get_or_create(
+            slug="demo-clinic",
+            defaults={"name": "Demo Clinic", "org_type": Organization.OrgType.CLINIC},
+        )
+        admin = User.objects.filter(username="admin").first()
+        if admin is not None:
+            Membership.objects.get_or_create(
+                user=admin, organization=organization,
+                defaults={"is_default": True, "is_admin": True},
+            )
+        return organization
+
+    def _seed_templates(self):
+        NotificationTemplate.objects.get_or_create(
+            code="critical-result",
+            defaults={
+                "description": "Critical lab result alert",
+                "subject_template": "Critical result for {{ patient }}",
+                "body_template": "{{ analyte }} = {{ value }} ({{ flag }}) for order {{ order }}.",
+                "default_channel": "in_app",
+            },
+        )
 
     # ------------------------------------------------------------------ RBAC
     def _seed_rbac(self):
@@ -141,6 +178,66 @@ class Command(BaseCommand):
             test_code="FBG", defaults={
                 "name": "Fasting Blood Glucose", "concept": concepts["glucose"],
                 "section": chem, "specimen_type": blood, "price": Decimal("80.00")},
+        )
+        self._seed_flabs(concepts, haem)
+
+    # ---------------------------------------------------- FLabs extensions
+    def _seed_flabs(self, concepts, haem_section):
+        hb_test = lis.LabTest.objects.get(test_code="HB")
+        # Demographic (sex-specific) reference ranges for haemoglobin.
+        lis.ReferenceRange.objects.get_or_create(
+            lab_test=hb_test, analyte=concepts["hb"], sex="M",
+            defaults={"low_normal": 13, "hi_normal": 17, "low_critical": 7,
+                      "units": "g/dL", "text_range": "13 - 17 g/dL (M)"},
+        )
+        lis.ReferenceRange.objects.get_or_create(
+            lab_test=hb_test, analyte=concepts["hb"], sex="F",
+            defaults={"low_normal": 12, "hi_normal": 15, "low_critical": 7,
+                      "units": "g/dL", "text_range": "12 - 15 g/dL (F)"},
+        )
+        # An auto-verification rule for haemoglobin.
+        lis.AutoVerificationRule.objects.get_or_create(
+            name="Hb auto-verify", lab_test=hb_test,
+            defaults={"require_in_range": True, "block_on_critical": True,
+                      "delta_check_percent": 25},
+        )
+        # A referring doctor and a B2B client.
+        lis.ReferringDoctor.objects.get_or_create(
+            code="DR001", defaults={"name": "Dr. Mwansa", "specialty": "General"})
+        lis.Client.objects.get_or_create(
+            code="HOSP01", defaults={"name": "City Hospital",
+                                     "client_type": lis.Client.ClientType.HOSPITAL})
+        # Microbiology reference data.
+        for org in ["Escherichia coli", "Staphylococcus aureus", "Klebsiella pneumoniae"]:
+            lis.Organism.objects.get_or_create(name=org)
+        for ab, abbr in [("Amoxicillin", "AMX"), ("Ciprofloxacin", "CIP"),
+                         ("Ceftriaxone", "CRO")]:
+            lis.Antibiotic.objects.get_or_create(
+                name=ab, defaults={"abbreviation": abbr})
+
+    # -------------------------------------------------------------- finance
+    def _seed_finance(self):
+        from apps.finance.models import ExpenseCategory, FinancialAccount
+
+        FinancialAccount.objects.get_or_create(
+            name="Main Cash Drawer",
+            defaults={"account_type": FinancialAccount.AccountType.CASH, "is_default": True},
+        )
+        FinancialAccount.objects.get_or_create(
+            name="Bank Account",
+            defaults={"account_type": FinancialAccount.AccountType.BANK},
+        )
+        for cat in ["Rent", "Salaries", "Utilities", "Reagents & Consumables", "Maintenance"]:
+            ExpenseCategory.objects.get_or_create(name=cat)
+
+        # A demo payment gateway (manual/test) settling into the bank account.
+        from apps.payments.models import PaymentGateway
+        bank, _ = FinancialAccount.objects.get_or_create(name="Bank Account")
+        PaymentGateway.objects.get_or_create(
+            name="Test Gateway",
+            defaults={"provider": "manual", "is_test": True,
+                      "supported_channels": ["CARD", "MOBILE_MONEY"],
+                      "settlement_account": bank},
         )
 
     # ----------------------------------------------------- inventory/billing

@@ -1,5 +1,7 @@
 # Medraxis — Unified Healthcare Business Platform
 
+[![CI](https://github.com/martinnyemba/medraxis/actions/workflows/ci.yml/badge.svg)](https://github.com/martinnyemba/medraxis/actions/workflows/ci.yml)
+
 Medraxis is a **Django reimplementation inspired by the [OpenMRS](https://openmrs.org/)
 architecture**, extended into a single integrated platform for clinics,
 diagnostic centres, laboratories, pharmacies and medical businesses. It combines:
@@ -38,6 +40,11 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 | [`docs/requirements.md`](docs/requirements.md) | Roles, user stories, functional & non-functional requirements |
 | [`docs/erd.md`](docs/erd.md) | Mermaid ER diagrams per domain + normalization notes |
 | [`docs/api.md`](docs/api.md) | API reference, auth, conventions, workflow actions |
+| [`docs/platform_features.md`](docs/platform_features.md) | FHIR facade, HL7/ASTM interfacing, async notifications/reports, PDF printing, multi-tenancy |
+| [`docs/openmrs_coverage.md`](docs/openmrs_coverage.md) | Model-by-model coverage map vs. the OpenMRS Java domain model |
+| [`docs/flabs_research.md`](docs/flabs_research.md) | Reverse-engineered FLabs LIS analysis + gap closure (catalogue, B2B/branch, microbiology, QC, auto-verification, WhatsApp delivery) |
+| [`docs/business_ops_research.md`](docs/business_ops_research.md) | Reverse-engineered Valeron/Vyapar analysis + the accounting backbone (accounts, expenses, payables, party ledger, quotations, returns, GST) |
+| [`docs/payment_gateways.md`](docs/payment_gateways.md) | Payment-gateway design + Stripe / Flutterwave (mobile money) / Lenco integration |
 | [`SKILLS.md`](SKILLS.md) | Engineering standards followed by this project |
 
 ## Project structure
@@ -46,14 +53,19 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 medraxis/
 ├── config/                 # settings (base/local/production), urls, celery, api_router
 ├── apps/
-│   ├── core/               # OpenMRS base models, middleware, audit, RBAC plumbing
+│   ├── core/               # OpenMRS base models, middleware, audit, RBAC plumbing, PDF helpers
+│   ├── tenancy/            # Organization (tenant), Membership, request scoping
 │   ├── users/              # custom User, Role/Privilege RBAC, Provider
 │   ├── emr/                # Concept dictionary, Person/Patient, Encounter, Obs, Order, Programs
-│   ├── lis/                # LabTest catalogue, TestOrder, Specimen, LabResult, Analyzer
+│   ├── lis/                # LabTest, TestOrder, Specimen, LabResult, Analyzer, HL7/ASTM drivers
 │   ├── inventory/          # Product, StockBatch, StockTransaction ledger, PurchaseOrder
 │   ├── pharmacy/           # DrugOrder, Dispense (stock-coupled)
-│   ├── pos/                # Sale, SaleLine, Payment, Customer
-│   └── billing/            # BillableService, InsuranceScheme, PatientInsurance
+│   ├── pos/                # Sale, SaleLine, Payment, Customer, PDF receipts
+│   ├── billing/            # BillableService, InsuranceScheme, PatientInsurance
+│   ├── finance/            # Cash/bank accounts, expenses, supplier payments, party ledger, GST components
+│   ├── payments/           # Payment gateways: Stripe, Flutterwave (mobile money), Lenco
+│   ├── notifications/      # Celery notifications + async report generation
+│   └── fhir/               # FHIR R4 read/search facade (/fhir/)
 ├── docs/                   # research, erd, requirements, api
 ├── manage.py
 ├── requirements.txt
@@ -114,6 +126,34 @@ patient `Obs`, FEFO inventory issuing with rollback on shortage, POS totals
 (discount + GST) and stock-coupled sale completion, and patient-registration
 RBAC enforcement.
 
+## Continuous integration (CI/CD)
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
+
+| Job | What it checks |
+|---|---|
+| **Lint** | `ruff check` (pyflakes, import sorting, pyupgrade, bugbear, Django rules; config in `pyproject.toml`) |
+| **Tests (SQLite)** | migrations in sync (`makemigrations --check`), `manage.py check`, full test suite |
+| **Tests (PostgreSQL)** | migrate + seed + tests against Postgres 16 (the production DB path) |
+| **Docker build** | builds the production image from the `Dockerfile` |
+
+Lint and lint+tests locally:
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+python manage.py test apps
+```
+
+Run the production image (migrates, then serves via gunicorn):
+
+```bash
+docker build -t medraxis .
+docker run -p 8000:8000 \
+  -e DJANGO_SECRET_KEY=... -e DJANGO_ALLOWED_HOSTS=your.host \
+  -e DATABASE_URL=postgres://user:pass@db:5432/medraxis medraxis
+```
+
 ## Tech stack
 
 Python 3.11+ · Django 5.1 · Django REST Framework · SimpleJWT · django-filter ·
@@ -126,12 +166,27 @@ server-side RBAC on protected endpoints · throttling · audit log + soft-delete
 trails · immutable payments & append-only stock ledger · production hardening
 (HTTPS/HSTS/secure cookies). See [`docs/requirements.md`](docs/requirements.md).
 
+## Platform capabilities
+
+Built on top of the core domains (see [`docs/platform_features.md`](docs/platform_features.md)):
+
+- **FHIR R4 facade** at `/fhir/` (Patient, Encounter, Observation, ServiceRequest,
+  MedicationRequest, DiagnosticReport, Organization) with tenant scoping.
+- **Analyzer interfacing**: dependency-free HL7 v2 and ASTM drivers that ingest
+  instrument results, match them to open orders and record auto-flagged results.
+- **Async notifications & reports** via Celery (email/SMS/in-app, idempotent;
+  CSV report generation) — runs eagerly without a broker in dev/tests.
+- **PDF printing**: invoices/receipts, specimen labels and patient lab reports.
+- **Multi-tenant facility scoping**: row-level isolation by `Organization`,
+  fail-closed on unauthorized `X-Organization` headers.
+
 ## Status
 
-Data model, migrations, REST API, the core integrative workflows, seed data,
-tests and docs are implemented across all eight apps. FHIR REST facade,
-HL7/ASTM analyzer drivers, Celery notification/report tasks and a front-end are
-designed-for and on the roadmap — none require reworking the data model.
+Implemented across eleven apps: full data model, migrations, REST API, the
+integrative clinical/lab/pharmacy/POS workflows, the platform capabilities
+above, seed data, **31 passing tests**, and documentation. A front-end and
+write-side FHIR remain on the roadmap — neither requires reworking the data
+model.
 
 ## License & attribution
 

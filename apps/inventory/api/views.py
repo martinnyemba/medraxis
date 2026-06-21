@@ -8,6 +8,7 @@ from apps.inventory import services
 from apps.inventory.api.serializers import (
     ProductCategorySerializer,
     ProductSerializer,
+    PurchaseBillSerializer,
     PurchaseOrderSerializer,
     ReceiveStockSerializer,
     StockBatchSerializer,
@@ -15,6 +16,7 @@ from apps.inventory.api.serializers import (
     SupplierSerializer,
     TaxRateSerializer,
 )
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
@@ -37,7 +39,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "contact_person", "phone", "tax_identifier"]
 
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.Product.objects.select_related("category", "unit", "tax_rate")
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
@@ -101,3 +103,32 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.inventory.services_po import next_po_number
         serializer.save(po_number=next_po_number())
+
+
+class PurchaseBillViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
+    """Supplier bills (payables). Creating one posts a supplier payable and,
+    by default, receives the billed stock through the inventory ledger."""
+
+    queryset = m.PurchaseBill.objects.select_related("supplier", "location").prefetch_related("items")
+    serializer_class = PurchaseBillSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["supplier", "status", "location"]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def create(self, request, *args, **kwargs):
+        from rest_framework import status as drf_status
+        from rest_framework.response import Response as DRFResponse
+
+        from apps.finance.services import create_purchase_bill
+
+        ser = self.get_serializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        bill = create_purchase_bill(
+            supplier=d["supplier"], location=d["location"], items=d["items"],
+            bill_date=d.get("bill_date"), purchase_order=d.get("purchase_order"),
+            supplier_invoice_no=d.get("supplier_invoice_no", ""),
+            receive_stock=request.data.get("receive_stock", True),
+            organization=getattr(request, "organization", None),
+        )
+        return DRFResponse(self.get_serializer(bill).data, status=drf_status.HTTP_201_CREATED)

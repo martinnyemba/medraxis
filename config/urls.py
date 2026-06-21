@@ -39,6 +39,10 @@ api_v1_patterns = [
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include((api_v1_patterns, "api"), namespace="v1")),
+    # FHIR R4 read/search facade.
+    path("fhir/", include("apps.fhir.urls")),
+    # Payment provider webhooks.
+    path("payments/", include("apps.payments.urls")),
     # API documentation.
     path("api/docs/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("api/redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),

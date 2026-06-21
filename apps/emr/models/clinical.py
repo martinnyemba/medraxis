@@ -31,8 +31,32 @@ class Allergy(BaseOpenmrsData):
     )
     category = models.CharField(max_length=20, choices=Category.choices, default=Category.DRUG)
     severity = models.CharField(max_length=20, choices=Severity.choices, blank=True, default="")
+    # Free-text reaction kept for quick entry; coded reactions live in
+    # AllergyReaction (OpenMRS allows several coded reactions per allergy).
     reaction = models.CharField(max_length=255, blank=True, default="")
     comment = models.CharField(max_length=255, blank=True, default="")
+
+
+class AllergyReaction(models.Model):
+    """A single coded reaction of an allergy (OpenMRS ``AllergyReaction``).
+
+    An allergy may manifest as several reactions (rash, anaphylaxis, ...), each
+    coded to a concept plus optional non-coded detail.
+    """
+
+    allergy = models.ForeignKey(
+        Allergy, on_delete=models.CASCADE, related_name="reactions"
+    )
+    reaction = models.ForeignKey(
+        "emr.Concept", on_delete=models.PROTECT, related_name="allergy_reactions"
+    )
+    reaction_non_coded = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        unique_together = ("allergy", "reaction")
+
+    def __str__(self):
+        return f"{self.reaction} ({self.allergy_id})"
 
 
 class Condition(BaseOpenmrsData):

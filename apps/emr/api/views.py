@@ -3,14 +3,21 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.emr import models as m
 from apps.emr.api.serializers import (
+    CohortSerializer,
     ConceptSerializer,
+    DrugSerializer,
     EncounterSerializer,
+    FormSerializer,
     ObsSerializer,
+    OrderFrequencySerializer,
     OrderSerializer,
     PatientSerializer,
+    RelationshipSerializer,
+    RelationshipTypeSerializer,
     VisitSerializer,
 )
 from apps.emr.services import next_order_number
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 from apps.users.permissions import HasPrivilege
 
 
@@ -23,7 +30,7 @@ class ConceptViewSet(viewsets.ModelViewSet):
     filterset_fields = ["concept_class", "datatype", "is_set"]
 
 
-class PatientViewSet(viewsets.ModelViewSet):
+class PatientViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = (
         m.Patient.objects.select_related("person")
         .prefetch_related("person__names", "identifiers__identifier_type")
@@ -39,14 +46,14 @@ class PatientViewSet(viewsets.ModelViewSet):
     filterset_fields = {"person__gender": ["exact"], "person__dead": ["exact"]}
 
 
-class VisitViewSet(viewsets.ModelViewSet):
+class VisitViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.Visit.objects.select_related("patient", "visit_type", "location")
     serializer_class = VisitSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["patient", "visit_type", "location"]
 
 
-class EncounterViewSet(viewsets.ModelViewSet):
+class EncounterViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.Encounter.objects.select_related(
         "patient", "encounter_type", "visit", "location"
     )
@@ -62,7 +69,7 @@ class ObsViewSet(viewsets.ModelViewSet):
     filterset_fields = ["person", "concept", "encounter", "interpretation", "status"]
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.Order.objects.select_related(
         "order_type", "concept", "patient", "orderer"
     )
@@ -72,3 +79,48 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(order_number=next_order_number())
+
+
+class RelationshipTypeViewSet(viewsets.ModelViewSet):
+    queryset = m.RelationshipType.objects.all()
+    serializer_class = RelationshipTypeSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name", "a_is_to_b", "b_is_to_a"]
+
+
+class RelationshipViewSet(viewsets.ModelViewSet):
+    queryset = m.Relationship.objects.select_related(
+        "person_a", "person_b", "relationship_type")
+    serializer_class = RelationshipSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["person_a", "person_b", "relationship_type"]
+
+
+class DrugViewSet(viewsets.ModelViewSet):
+    queryset = m.Drug.objects.select_related("concept", "dosage_form")
+    serializer_class = DrugSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name", "strength"]
+    filterset_fields = ["concept", "combination"]
+
+
+class OrderFrequencyViewSet(viewsets.ModelViewSet):
+    queryset = m.OrderFrequency.objects.select_related("concept")
+    serializer_class = OrderFrequencySerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+
+
+class CohortViewSet(viewsets.ModelViewSet):
+    queryset = m.Cohort.objects.all()
+    serializer_class = CohortSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+
+
+class FormViewSet(viewsets.ModelViewSet):
+    queryset = m.Form.objects.select_related("encounter_type")
+    serializer_class = FormSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+    filterset_fields = ["published", "encounter_type"]

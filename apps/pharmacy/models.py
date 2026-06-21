@@ -23,10 +23,21 @@ class DrugOrder(Order):
     drug = models.ForeignKey(
         "inventory.Product", on_delete=models.PROTECT, related_name="drug_orders"
     )
+    # The clinical formulation prescribed (OpenMRS DrugOrder.drug). The
+    # ``drug`` FK above remains the stockable product that fulfils it.
+    drug_formulation = models.ForeignKey(
+        "emr.Drug", on_delete=models.SET_NULL, null=True, blank=True, related_name="drug_orders"
+    )
     dose = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     dose_units = models.CharField(max_length=50, blank=True, default="")
     frequency = models.CharField(
         max_length=50, blank=True, default="", help_text="e.g. BD, TDS, QID, OD"
+    )
+    # Coded frequency (OpenMRS OrderFrequency); ``frequency`` above stays as a
+    # human-readable fallback.
+    order_frequency = models.ForeignKey(
+        "emr.OrderFrequency", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="drug_orders",
     )
     route = models.CharField(max_length=50, blank=True, default="", help_text="PO, IV, IM, ...")
     duration = models.PositiveIntegerField(null=True, blank=True)

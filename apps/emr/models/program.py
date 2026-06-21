@@ -60,3 +60,28 @@ class PatientState(BaseOpenmrsData):
     )
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
+
+
+class ConceptStateConversion(BaseOpenmrsData):
+    """Auto-transition a program enrolment when a triggering obs is recorded.
+
+    Mirrors OpenMRS ``ConceptStateConversion``: e.g. "when the concept
+    'Patient died' is observed, move the workflow to the 'Died' state". This is
+    what lets observations drive program state changes automatically.
+    """
+
+    concept = models.ForeignKey(
+        "emr.Concept", on_delete=models.PROTECT, related_name="state_conversions"
+    )
+    workflow = models.ForeignKey(
+        ProgramWorkflow, on_delete=models.CASCADE, related_name="state_conversions"
+    )
+    state = models.ForeignKey(
+        ProgramWorkflowState, on_delete=models.PROTECT, related_name="state_conversions"
+    )
+
+    class Meta:
+        unique_together = ("concept", "workflow")
+
+    def __str__(self):
+        return f"{self.concept} -> {self.state}"

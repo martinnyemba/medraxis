@@ -88,3 +88,23 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         for item in items:
             m.PurchaseOrderItem.objects.create(purchase_order=po, **item)
         return po
+
+
+class PurchaseBillItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.PurchaseBillItem
+        fields = ["id", "product", "quantity", "unit_cost", "tax_percent",
+                  "batch_number", "expiry_date"]
+
+
+class PurchaseBillSerializer(serializers.ModelSerializer):
+    items = PurchaseBillItemSerializer(many=True)
+    balance_due = serializers.ReadOnlyField()
+
+    class Meta:
+        model = m.PurchaseBill
+        fields = ["id", "bill_number", "supplier", "purchase_order", "location",
+                  "bill_date", "supplier_invoice_no", "subtotal", "tax_total",
+                  "grand_total", "amount_paid", "balance_due", "status", "note", "items"]
+        read_only_fields = ["bill_number", "subtotal", "tax_total", "grand_total",
+                            "amount_paid", "balance_due", "status"]

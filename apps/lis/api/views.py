@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -8,13 +9,16 @@ from apps.emr.services import next_order_number
 from apps.lis import models as m
 from apps.lis import services
 from apps.lis.api.serializers import (
+    AnalyzerMessageSerializer,
     AnalyzerSerializer,
+    IngestMessageSerializer,
     LabResultSerializer,
     LabSectionSerializer,
     LabTestSerializer,
     SpecimenSerializer,
     TestOrderSerializer,
 )
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
 class LabSectionViewSet(viewsets.ModelViewSet):
@@ -32,7 +36,7 @@ class LabTestViewSet(viewsets.ModelViewSet):
     filterset_fields = ["section", "is_panel"]
 
 
-class TestOrderViewSet(viewsets.ModelViewSet):
+class TestOrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.TestOrder.objects.select_related("patient", "lab_test", "orderer")
     serializer_class = TestOrderSerializer
     permission_classes = [IsAuthenticated]
@@ -41,8 +45,21 @@ class TestOrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(order_number=next_order_number())
 
+    @action(detail=True, methods=["get"])
+    def report(self, request, pk=None):
+        """Download a patient-facing lab report PDF for this order."""
+        from apps.lis.documents import build_lab_report_pdf
 
-class SpecimenViewSet(viewsets.ModelViewSet):
+        test_order = self.get_object()
+        pdf = build_lab_report_pdf(test_order)
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="report_{test_order.order_number}.pdf"'
+        )
+        return response
+
+
+class SpecimenViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.Specimen.objects.select_related("patient", "specimen_type")
     serializer_class = SpecimenSerializer
     permission_classes = [IsAuthenticated]
@@ -50,6 +67,19 @@ class SpecimenViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(accession_number=services.next_accession_number())
+
+    @action(detail=True, methods=["get"])
+    def label(self, request, pk=None):
+        """Download a printable specimen label PDF."""
+        from apps.lis.documents import build_specimen_label_pdf
+
+        specimen = self.get_object()
+        pdf = build_specimen_label_pdf(specimen)
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="label_{specimen.accession_number}.pdf"'
+        )
+        return response
 
 
 class LabResultViewSet(viewsets.ModelViewSet):
@@ -76,6 +106,23 @@ class LabResultViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(result).data)
 
     @action(detail=True, methods=["post"])
+    def auto_verify(self, request, pk=None):
+        """Run the test's auto-verification rule on an entered result.
+
+        Returns whether it was auto-verified and fires reflex orders if abnormal.
+        """
+        from apps.lis.automation_service import apply_reflex, auto_verify_result
+
+        result = self.get_object()
+        verified = auto_verify_result(result)
+        reflex = apply_reflex(result)
+        return Response({
+            "auto_verified": verified,
+            "status": result.status,
+            "reflex_order": reflex.order_number if reflex else None,
+        })
+
+    @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
         result = self.get_object()
         if result.status != m.LabResult.Status.ENTERED:
@@ -100,3 +147,31 @@ class AnalyzerViewSet(viewsets.ModelViewSet):
     serializer_class = AnalyzerSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["section", "protocol"]
+
+
+class AnalyzerMessageViewSet(viewsets.ReadOnlyModelViewSet):
+    """Inbound analyzer transmissions and their parse/match outcomes.
+
+    POST ``ingest/`` to submit a raw HL7/ASTM payload for processing. This is the
+    interface an instrument middleware or driver process calls to push results.
+    """
+
+    queryset = m.AnalyzerMessage.objects.select_related("analyzer")
+    serializer_class = AnalyzerMessageSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["analyzer", "protocol", "status"]
+
+    @action(detail=False, methods=["post"])
+    def ingest(self, request):
+        form = IngestMessageSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        from apps.lis.ingest import ingest_message
+
+        message = ingest_message(
+            form.validated_data["raw_payload"],
+            protocol=form.validated_data["protocol"],
+            analyzer=form.validated_data.get("analyzer"),
+        )
+        return Response(
+            AnalyzerMessageSerializer(message).data, status=status.HTTP_201_CREATED
+        )

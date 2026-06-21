@@ -48,6 +48,34 @@ curl -X POST http://localhost:8000/api/v1/auth/token/ \
 | `pharmacy/drug-orders/`, `pharmacy/dispenses/` | Pharmacy | dispense issues stock |
 | `pos/sales/`, `pos/payments/`, `pos/customers/` | POS | sale actions below |
 | `billing/services/`, `billing/insurance-schemes/`, `billing/patient-insurance/` | Billing | |
+| `organizations/`, `memberships/` | Tenancy | `GET organizations/current/`, `mine/` |
+| `lab/messages/` | Analyzer interfacing | `POST lab/messages/ingest/` (HL7/ASTM) |
+| `notifications/`, `reports/` | Async | in-app inbox; `POST reports/` to generate |
+
+### FHIR R4 facade (mounted at `/fhir/`)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/fhir/metadata` | CapabilityStatement |
+| GET | `/fhir/{ResourceType}` | Search → FHIR `Bundle` |
+| GET | `/fhir/{ResourceType}/{id}` | Read a resource |
+
+Resources: Patient, Encounter, Observation, ServiceRequest, MedicationRequest,
+DiagnosticReport, Organization. See `docs/platform_features.md`.
+
+### Multi-tenancy
+
+Send `X-Organization: <slug>` to act within a specific facility. Tenant-scoped
+list endpoints return only the active organization's records; an unauthorized
+organization header returns `403`.
+
+### Document downloads (PDF)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/pos/sales/{id}/receipt/` | Invoice/receipt PDF |
+| GET | `/api/v1/lab/specimens/{id}/label/` | Specimen label PDF |
+| GET | `/api/v1/lab/test-orders/{id}/report/` | Patient lab report PDF |
 
 ## Workflow actions (custom endpoints)
 

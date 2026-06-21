@@ -63,6 +63,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.core",
+    "apps.tenancy",
     "apps.users",
     "apps.emr",
     "apps.lis",
@@ -70,6 +71,10 @@ LOCAL_APPS = [
     "apps.pharmacy",
     "apps.pos",
     "apps.billing",
+    "apps.finance",
+    "apps.payments",
+    "apps.notifications",
+    "apps.fhir",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -88,6 +93,8 @@ MIDDLEWARE = [
     # Project middleware (cross-cutting concerns only, no business logic).
     "apps.core.middleware.request_id.RequestIDMiddleware",
     "apps.core.middleware.audit_user.CurrentUserMiddleware",
+    # Tenant resolution must run after authentication so the user is known.
+    "apps.tenancy.middleware.TenantMiddleware",
     "apps.core.middleware.request_logging.RequestLoggingMiddleware",
 ]
 
@@ -274,4 +281,28 @@ MEDRAXIS = {
     "PATIENT_IDENTIFIER_PREFIX": env("PATIENT_IDENTIFIER_PREFIX", default="MRX"),
     "FHIR_ENABLED": env.bool("FHIR_ENABLED", default=True),
     "DEFAULT_CURRENCY": env("DEFAULT_CURRENCY", default="USD"),
+}
+
+# ---------------------------------------------------------------------------
+# Payment gateways
+# ---------------------------------------------------------------------------
+# Provider secrets are read from the environment ONLY (never stored in the DB).
+PAYMENTS = {
+    "stripe": {
+        "secret_key": env("STRIPE_SECRET_KEY", default=""),
+        "publishable_key": env("STRIPE_PUBLISHABLE_KEY", default=""),
+        "webhook_secret": env("STRIPE_WEBHOOK_SECRET", default=""),
+    },
+    "flutterwave": {
+        "secret_key": env("FLUTTERWAVE_SECRET_KEY", default=""),
+        "public_key": env("FLUTTERWAVE_PUBLIC_KEY", default=""),
+        "secret_hash": env("FLUTTERWAVE_SECRET_HASH", default=""),
+    },
+    "lenco": {
+        "api_key": env("LENCO_API_KEY", default=""),
+        "webhook_secret": env("LENCO_WEBHOOK_SECRET", default=""),
+    },
+    "manual": {
+        "webhook_secret": env("MANUAL_GATEWAY_WEBHOOK_SECRET", default="test-secret"),
+    },
 }

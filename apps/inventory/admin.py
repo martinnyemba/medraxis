@@ -38,3 +38,18 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
 
 for model in (m.ProductCategory, m.UnitOfMeasure, m.TaxRate, m.Supplier):
     admin.site.register(model)
+
+
+class PurchaseBillItemInline(admin.TabularInline):
+    model = m.PurchaseBillItem
+    extra = 0
+
+
+@admin.register(m.PurchaseBill)
+class PurchaseBillAdmin(admin.ModelAdmin):
+    list_display = ("bill_number", "supplier", "bill_date", "grand_total",
+                    "amount_paid", "status")
+    list_filter = ("status",)
+    search_fields = ("bill_number", "supplier_invoice_no")
+    inlines = [PurchaseBillItemInline]
+    date_hierarchy = "bill_date"

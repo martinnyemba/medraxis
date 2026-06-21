@@ -8,7 +8,7 @@ analysable, interoperable and FHIR/LOINC-mappable.
 """
 from django.db import models
 
-from apps.core.models import BaseOpenmrsMetadata
+from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata
 
 
 class ConceptClass(BaseOpenmrsMetadata):
@@ -106,6 +106,23 @@ class ConceptAnswer(BaseOpenmrsMetadata):
         ordering = ["sort_weight"]
 
 
+class ConceptDescription(BaseOpenmrsMetadata):
+    """A locale-specific free-text description of a concept.
+
+    OpenMRS separates short synonyms (``ConceptName``) from longer prose
+    descriptions; this is the latter, one per locale.
+    """
+
+    concept = models.ForeignKey(
+        Concept, on_delete=models.CASCADE, related_name="descriptions"
+    )
+    locale = models.CharField(max_length=20, default="en", db_index=True)
+    description_text = models.TextField()
+
+    class Meta:
+        indexes = [models.Index(fields=["concept", "locale"])]
+
+
 class ConceptSetMembership(models.Model):
     """Ordered membership of a concept within a concept set/panel."""
 
@@ -120,6 +137,9 @@ class ConceptSetMembership(models.Model):
     class Meta:
         ordering = ["sort_weight"]
         unique_together = ("concept_set", "member")
+
+    def __str__(self):
+        return f"{self.member_id} in set {self.concept_set_id}"
 
 
 class ConceptSource(BaseOpenmrsMetadata):
@@ -156,6 +176,86 @@ class ConceptMapping(models.Model):
     map_type = models.CharField(
         max_length=20, choices=MapType.choices, default=MapType.SAME_AS
     )
+    map_type_ref = models.ForeignKey(
+        "emr.ConceptMapType", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="concept_mappings",
+        help_text="Optional rich map type (extends the simple map_type choices).",
+    )
 
     class Meta:
         unique_together = ("concept", "reference_term", "map_type")
+
+    def __str__(self):
+        return f"{self.concept_id} {self.map_type} {self.reference_term_id}"
+
+
+class ConceptMapType(BaseOpenmrsMetadata):
+    """A configurable mapping relationship (OpenMRS ``ConceptMapType``).
+
+    e.g. SAME-AS, NARROWER-THAN, BROADER-THAN, ASSOCIATED-WITH. Lets sites add
+    mapping semantics beyond the built-in choices.
+    """
+
+    is_hidden = models.BooleanField(default=False)
+    weight = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["weight", "name"]
+
+
+class ConceptReferenceTermMap(models.Model):
+    """A typed mapping between two reference terms (term-to-term).
+
+    Mirrors OpenMRS ``ConceptReferenceTermMap`` -- e.g. a LOINC term mapped
+    SAME-AS a CIEL term -- enabling terminology crosswalks.
+    """
+
+    term_a = models.ForeignKey(
+        ConceptReferenceTerm, on_delete=models.CASCADE, related_name="maps_from"
+    )
+    term_b = models.ForeignKey(
+        ConceptReferenceTerm, on_delete=models.CASCADE, related_name="maps_to"
+    )
+    map_type = models.ForeignKey(
+        ConceptMapType, on_delete=models.PROTECT, related_name="term_maps"
+    )
+
+    class Meta:
+        unique_together = ("term_a", "term_b", "map_type")
+
+    def __str__(self):
+        return f"{self.term_a_id} {self.map_type_id} {self.term_b_id}"
+
+
+class ConceptProposal(BaseOpenmrsData):
+    """A proposed new concept/answer captured during data entry.
+
+    Mirrors OpenMRS ``ConceptProposal``: when a clinician enters a value that is
+    not yet in the dictionary, it is recorded for a dictionary manager to review
+    and either map to an existing concept or promote to a new one.
+    """
+
+    class State(models.TextChoices):
+        UNMAPPED = "UNMAPPED", "Unmapped"
+        CONCEPT = "CONCEPT", "Mapped to concept"
+        SYNONYM = "SYNONYM", "Mapped as synonym"
+        REJECTED = "REJECTED", "Rejected"
+
+    original_text = models.CharField(max_length=255)
+    encounter = models.ForeignKey(
+        "emr.Encounter", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="concept_proposals",
+    )
+    obs_concept = models.ForeignKey(
+        Concept, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="proposals_as_question",
+    )
+    mapped_concept = models.ForeignKey(
+        Concept, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="proposals_mapped",
+    )
+    state = models.CharField(max_length=20, choices=State.choices, default=State.UNMAPPED)
+    comments = models.CharField(max_length=255, blank=True, default="")
+
+    def __str__(self):
+        return f"Proposal: {self.original_text} [{self.state}]"

@@ -12,6 +12,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db import models
 
 from apps.core.models import TimeStampedModel
+from apps.tenancy.mixins import TenantScopedModel
 
 # Currency lines round half-up to the minor unit (standard invoicing convention).
 _CENTS = Decimal("0.01")
@@ -40,7 +41,7 @@ class Customer(TimeStampedModel):
         return self.name
 
 
-class Sale(TimeStampedModel):
+class Sale(TimeStampedModel, TenantScopedModel):
     """An invoice / POS bill."""
 
     class Status(models.TextChoices):
@@ -54,6 +55,10 @@ class Sale(TimeStampedModel):
     invoice_number = models.CharField(max_length=64, unique=True, db_index=True)
     customer = models.ForeignKey(
         Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="sales"
+    )
+    # A B2B lab client may be the billed account instead of a retail customer.
+    client = models.ForeignKey(
+        "lis.Client", on_delete=models.SET_NULL, null=True, blank=True, related_name="sales"
     )
     patient = models.ForeignKey(
         "emr.Patient", on_delete=models.SET_NULL, null=True, blank=True, related_name="sales"
@@ -111,6 +116,7 @@ class SaleLine(models.Model):
         PRODUCT = "PRODUCT", "Product"
         SERVICE = "SERVICE", "Service"
         LAB_TEST = "LAB_TEST", "Lab test"
+        LAB_PROFILE = "LAB_PROFILE", "Lab profile"
         CONSULTATION = "CONSULTATION", "Consultation"
 
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name="lines")
@@ -122,6 +128,13 @@ class SaleLine(models.Model):
     )
     lab_test = models.ForeignKey(
         "lis.LabTest", on_delete=models.PROTECT, null=True, blank=True, related_name="sale_lines"
+    )
+    test_profile = models.ForeignKey(
+        "lis.TestProfile", on_delete=models.PROTECT, null=True, blank=True, related_name="sale_lines"
+    )
+    billable_service = models.ForeignKey(
+        "billing.BillableService", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="sale_lines",
     )
     description = models.CharField(max_length=255, blank=True, default="")
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
@@ -181,6 +194,10 @@ class Payment(TimeStampedModel):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PAID)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     reference = models.CharField(max_length=120, blank=True, default="")
+    account = models.ForeignKey(
+        "finance.FinancialAccount", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="sale_payments",
+    )
     received_by = models.ForeignKey(
         "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="payments_received"
     )
@@ -190,3 +207,157 @@ class Payment(TimeStampedModel):
 
     def __str__(self):
         return f"{self.method} {self.amount} for {self.sale.invoice_number}"
+
+
+class Quotation(TimeStampedModel, TenantScopedModel):
+    """A non-binding estimate that can be converted into a Sale.
+
+    No stock or money effect until conversion -- it is a sales document used to
+    quote a patient/customer/client before they commit.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        SENT = "SENT", "Sent"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        CONVERTED = "CONVERTED", "Converted to sale"
+        EXPIRED = "EXPIRED", "Expired"
+        REJECTED = "REJECTED", "Rejected"
+
+    quotation_number = models.CharField(max_length=64, unique=True, db_index=True)
+    customer = models.ForeignKey(
+        Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="quotations"
+    )
+    client = models.ForeignKey(
+        "lis.Client", on_delete=models.SET_NULL, null=True, blank=True, related_name="quotations"
+    )
+    patient = models.ForeignKey(
+        "emr.Patient", on_delete=models.SET_NULL, null=True, blank=True, related_name="quotations"
+    )
+    location = models.ForeignKey(
+        "emr.Location", on_delete=models.PROTECT, related_name="quotations"
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    valid_until = models.DateField(null=True, blank=True)
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    discount_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    tax_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    converted_sale = models.ForeignKey(
+        Sale, on_delete=models.SET_NULL, null=True, blank=True, related_name="source_quotation"
+    )
+    note = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.quotation_number
+
+    def recalculate(self):
+        subtotal = Decimal("0")
+        discount = Decimal("0")
+        tax = Decimal("0")
+        for line in self.lines.all():
+            subtotal += line.gross_amount
+            discount += line.discount_amount
+            tax += line.tax_amount
+        self.subtotal = subtotal
+        self.discount_total = discount
+        self.tax_total = tax
+        self.grand_total = subtotal - discount + tax
+        return self
+
+
+class QuotationLine(models.Model):
+    """A line on a quotation (mirrors SaleLine pricing maths)."""
+
+    quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name="lines")
+    line_type = models.CharField(
+        max_length=20, choices=SaleLine.LineType.choices, default=SaleLine.LineType.PRODUCT
+    )
+    product = models.ForeignKey(
+        "inventory.Product", on_delete=models.PROTECT, null=True, blank=True, related_name="quotation_lines"
+    )
+    lab_test = models.ForeignKey(
+        "lis.LabTest", on_delete=models.PROTECT, null=True, blank=True, related_name="quotation_lines"
+    )
+    test_profile = models.ForeignKey(
+        "lis.TestProfile", on_delete=models.PROTECT, null=True, blank=True, related_name="quotation_lines"
+    )
+    billable_service = models.ForeignKey(
+        "billing.BillableService", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="quotation_lines",
+    )
+    description = models.CharField(max_length=255, blank=True, default="")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    def __str__(self):
+        return self.description or (self.product and self.product.name) or "quotation line"
+
+    @property
+    def gross_amount(self):
+        return self.quantity * self.unit_price
+
+    @property
+    def discount_amount(self):
+        return _money(self.gross_amount * self.discount_percent / Decimal("100"))
+
+    @property
+    def tax_amount(self):
+        taxable = self.gross_amount - self.discount_amount
+        return _money(taxable * self.tax_percent / Decimal("100"))
+
+
+class SalesReturn(TimeStampedModel, TenantScopedModel):
+    """A credit note for returned goods -- restocks and credits the party."""
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    return_number = models.CharField(max_length=64, unique=True, db_index=True)
+    sale = models.ForeignKey(
+        Sale, on_delete=models.PROTECT, related_name="returns"
+    )
+    location = models.ForeignKey(
+        "emr.Location", on_delete=models.PROTECT, related_name="sales_returns"
+    )
+    return_date = models.DateField(db_index=True)
+    reason = models.CharField(max_length=255, blank=True, default="")
+    restock = models.BooleanField(default=True)
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+
+    class Meta:
+        ordering = ["-return_date", "-id"]
+
+    def __str__(self):
+        return self.return_number
+
+    def recalculate(self):
+        self.total = sum((ln.line_total for ln in self.lines.all()), Decimal("0"))
+        return self
+
+
+class SalesReturnLine(models.Model):
+    """A returned product line."""
+
+    sales_return = models.ForeignKey(SalesReturn, on_delete=models.CASCADE, related_name="lines")
+    product = models.ForeignKey(
+        "inventory.Product", on_delete=models.PROTECT, null=True, blank=True, related_name="return_lines"
+    )
+    description = models.CharField(max_length=255, blank=True, default="")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return self.description or (self.product and self.product.name) or "return line"
+
+    @property
+    def line_total(self):
+        return _money(self.quantity * self.unit_price)

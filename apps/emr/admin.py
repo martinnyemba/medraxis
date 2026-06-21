@@ -75,5 +75,23 @@ for model in (
     m.Diagnosis,
     m.ConceptSource,
     m.ConceptReferenceTerm,
+    # Newly added OpenMRS core domain models.
+    m.RelationshipType,
+    m.Relationship,
+    m.Drug,
+    m.OrderFrequency,
+    m.OrderSet,
+    m.OrderGroup,
+    m.ConceptMapType,
+    m.ConceptProposal,
+    m.ConceptStateConversion,
+    m.Cohort,
+    m.Form,
+    m.FieldType,
+    m.Field,
+    m.VisitAttributeType,
+    m.LocationAttributeType,
+    m.ConceptAttributeType,
+    m.ProgramAttributeType,
 ):
     admin.site.register(model)
