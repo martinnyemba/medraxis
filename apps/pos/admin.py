@@ -15,8 +15,8 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(m.Sale)
 class SaleAdmin(admin.ModelAdmin):
-    list_display = ("invoice_number", "status", "patient", "customer", "grand_total",
-                    "amount_paid", "created_at")
+    list_display = ("invoice_number", "status", "patient", "customer", "client",
+                    "grand_total", "amount_paid", "created_at")
     list_filter = ("status", "location")
     search_fields = ("invoice_number",)
     inlines = [SaleLineInline, PaymentInline]

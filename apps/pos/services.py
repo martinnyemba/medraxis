@@ -16,6 +16,25 @@ def next_invoice_number():
 
 
 @transaction.atomic
+def reprice_sale(sale: Sale):
+    """Re-resolve catalogue prices for every line and recompute totals.
+
+    Forces resolution (clears existing price/tax first) so a newly-set client
+    rate card is applied. Only meaningful before completion/payment.
+    """
+    from apps.pos.pricing import price_line
+
+    for line in sale.lines.all():
+        line.unit_price = Decimal("0")
+        line.tax_percent = Decimal("0")
+        price_line(line, client=sale.client)
+        line.save(update_fields=["unit_price", "tax_percent"])
+    sale.recalculate()
+    sale.save()
+    return sale
+
+
+@transaction.atomic
 def complete_sale(sale: Sale):
     """Finalise a sale: issue stock for product lines, recompute totals.
 

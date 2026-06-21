@@ -9,9 +9,10 @@ def build_receipt_pdf(sale):
 
     builder.text(f"Invoice: {sale.invoice_number}", size=10, bold=True, dy=13)
     builder.text(f"Date: {sale.created_at:%Y-%m-%d %H:%M}", size=9, dy=13)
-    party = sale.patient or sale.customer
+    party = sale.client or sale.customer or sale.patient
     if party is not None:
-        builder.text(f"Billed to: {party}", size=9, dy=13)
+        label = "Client" if sale.client_id else "Billed to"
+        builder.text(f"{label}: {party}", size=9, dy=13)
     builder.text(f"Status: {sale.get_status_display()}", size=9, dy=15)
 
     # Line items table.

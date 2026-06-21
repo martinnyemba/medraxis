@@ -205,11 +205,19 @@ delivery rides the shared notifications engine; the stock ledger and tenancy
 were untouched. The lab additions are *peripheral context* hung off the existing
 spine, not a parallel system.
 
-### Known follow-up (integration gap, not a regression)
+### Resolved: unified pricing & client billing
 Pricing has several legitimate sources (`LabTest.price`, `TestProfile.price`,
 `PriceListItem.price` per client, `Product.sale_price`, `BillableService.price`).
-Today `pos.SaleLine.unit_price` is entered explicitly and does not yet *resolve*
-from these. A single `resolve_price(billable, client)` service — and letting a
-`Sale` bill a `lis.Client` account, not only a `pos.Customer` — would complete
-the "one bill" promise. This is additive and does not contradict current
-behaviour; tracked as a follow-up.
+These are now reconciled by a single resolver, `apps.pos.pricing.resolve_unit_price`
+(`price_line` for a whole line), with precedence for lab tests:
+
+    client price-list item  >  default price-list item  >  LabTest.price
+
+`SaleLine` gained `test_profile` and `billable_service` references (and a
+`LAB_PROFILE` line type), so any billable thing prices itself. When a sale line
+omits `unit_price`/`tax_percent`, the serializer resolves them from the
+catalogue honouring the sale's client rate card; an explicit value is always
+respected. `Sale` gained a `client` FK so a B2B `lis.Client` can be the billed
+account alongside `pos.Customer`, and `POST /api/v1/pos/sales/{id}/reprice/`
+re-resolves prices after a client is assigned. This completes the "one bill"
+promise: products, lab tests, profiles and services bill through one path.

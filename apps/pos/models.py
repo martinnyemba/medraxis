@@ -56,6 +56,10 @@ class Sale(TimeStampedModel, TenantScopedModel):
     customer = models.ForeignKey(
         Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name="sales"
     )
+    # A B2B lab client may be the billed account instead of a retail customer.
+    client = models.ForeignKey(
+        "lis.Client", on_delete=models.SET_NULL, null=True, blank=True, related_name="sales"
+    )
     patient = models.ForeignKey(
         "emr.Patient", on_delete=models.SET_NULL, null=True, blank=True, related_name="sales"
     )
@@ -112,6 +116,7 @@ class SaleLine(models.Model):
         PRODUCT = "PRODUCT", "Product"
         SERVICE = "SERVICE", "Service"
         LAB_TEST = "LAB_TEST", "Lab test"
+        LAB_PROFILE = "LAB_PROFILE", "Lab profile"
         CONSULTATION = "CONSULTATION", "Consultation"
 
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name="lines")
@@ -123,6 +128,13 @@ class SaleLine(models.Model):
     )
     lab_test = models.ForeignKey(
         "lis.LabTest", on_delete=models.PROTECT, null=True, blank=True, related_name="sale_lines"
+    )
+    test_profile = models.ForeignKey(
+        "lis.TestProfile", on_delete=models.PROTECT, null=True, blank=True, related_name="sale_lines"
+    )
+    billable_service = models.ForeignKey(
+        "billing.BillableService", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="sale_lines",
     )
     description = models.CharField(max_length=255, blank=True, default="")
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)

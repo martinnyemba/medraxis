@@ -44,6 +44,13 @@ class SaleViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
             raise ValidationError(str(exc))
         return Response(self.get_serializer(sale).data)
 
+    @action(detail=True, methods=["post"])
+    def reprice(self, request, pk=None):
+        """Re-resolve catalogue prices for the sale's lines (e.g. after setting a client)."""
+        sale = self.get_object()
+        services.reprice_sale(sale)
+        return Response(self.get_serializer(sale).data)
+
     @action(detail=True, methods=["get"])
     def receipt(self, request, pk=None):
         """Download the sale as a printable PDF invoice/receipt."""
