@@ -1,0 +1,19 @@
+from apps.inventory.api.views import (
+    ProductCategoryViewSet,
+    ProductViewSet,
+    PurchaseOrderViewSet,
+    StockBatchViewSet,
+    StockTransactionViewSet,
+    SupplierViewSet,
+    TaxRateViewSet,
+)
+
+
+def register_routes(router):
+    router.register("inventory/categories", ProductCategoryViewSet, basename="product-category")
+    router.register("inventory/tax-rates", TaxRateViewSet, basename="tax-rate")
+    router.register("inventory/suppliers", SupplierViewSet, basename="supplier")
+    router.register("inventory/products", ProductViewSet, basename="product")
+    router.register("inventory/batches", StockBatchViewSet, basename="stock-batch")
+    router.register("inventory/transactions", StockTransactionViewSet, basename="stock-transaction")
+    router.register("inventory/purchase-orders", PurchaseOrderViewSet, basename="purchase-order")

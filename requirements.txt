@@ -1,0 +1,20 @@
+# Medraxis Unified Healthcare Platform -- runtime dependencies.
+# Pin majors for reproducibility; bump deliberately.
+
+# Core framework
+Django>=5.1,<5.2
+djangorestframework>=3.16,<3.18
+djangorestframework-simplejwt>=5.5,<6.0
+django-filter>=25.1
+drf-yasg>=1.21,<1.22
+
+# Configuration & database
+django-environ>=0.14
+psycopg2-binary>=2.9          # PostgreSQL (production)
+
+# Background tasks & caching
+celery>=5.4,<6.0
+redis>=5.0
+
+# WSGI server for production
+gunicorn>=22.0
