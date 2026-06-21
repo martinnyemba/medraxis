@@ -45,32 +45,15 @@ def resolve_reference_range(lab_test, analyte, patient):
 
 
 def flag_with_reference_range(result: LabResult):
-    """Flag a numeric result using a demographic ReferenceRange when available.
+    """Deprecated alias of :func:`apps.lis.services.compute_flag`.
 
-    Falls back to the analyte concept's built-in range (the existing behaviour)
-    when no ReferenceRange is configured. Returns the flag string.
+    Demographic reference-range flagging now lives in the single ``compute_flag``
+    entry point so every channel flags consistently. Kept for backward
+    compatibility with existing callers/tests.
     """
-    value = result.value_numeric
-    if value is None:
-        return result.flag or ""
+    from apps.lis.services import compute_flag
 
-    patient = result.test_order.patient
-    rng = resolve_reference_range(result.test_order.lab_test, result.analyte, patient)
-    if rng is None:
-        from apps.lis.services import compute_flag
-        return compute_flag(result)
-
-    if rng.text_range and not result.reference_range:
-        result.reference_range = rng.text_range
-    if rng.low_critical is not None and value <= rng.low_critical:
-        return LabResult.Flag.CRITICAL_LOW
-    if rng.hi_critical is not None and value >= rng.hi_critical:
-        return LabResult.Flag.CRITICAL_HIGH
-    if rng.low_normal is not None and value < rng.low_normal:
-        return LabResult.Flag.LOW
-    if rng.hi_normal is not None and value > rng.hi_normal:
-        return LabResult.Flag.HIGH
-    return LabResult.Flag.NORMAL
+    return compute_flag(result)
 
 
 def _previous_value(result: LabResult):

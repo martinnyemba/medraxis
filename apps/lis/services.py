@@ -15,21 +15,50 @@ def next_accession_number():
     return f"ACC-{today}-{count_today + 1:05d}"
 
 
-def compute_flag(result: LabResult):
-    """Derive a high/low/critical flag from the analyte's reference ranges."""
-    value = result.value_numeric
-    if value is None:
-        return ""
-    concept = result.analyte
-    if concept.low_critical is not None and value <= concept.low_critical:
+def _flag_from_limits(value, low_normal, hi_normal, low_critical, hi_critical):
+    if low_critical is not None and value <= low_critical:
         return LabResult.Flag.CRITICAL_LOW
-    if concept.hi_critical is not None and value >= concept.hi_critical:
+    if hi_critical is not None and value >= hi_critical:
         return LabResult.Flag.CRITICAL_HIGH
-    if concept.low_normal is not None and value < concept.low_normal:
+    if low_normal is not None and value < low_normal:
         return LabResult.Flag.LOW
-    if concept.hi_normal is not None and value > concept.hi_normal:
+    if hi_normal is not None and value > hi_normal:
         return LabResult.Flag.HIGH
     return LabResult.Flag.NORMAL
+
+
+def compute_flag(result: LabResult):
+    """Derive a high/low/critical flag for a numeric result.
+
+    This is the **single** flagging entry point used by every channel (manual
+    entry and analyzer ingestion alike), so a result flags identically however
+    it arrives. It prefers a demographic (age/sex) :class:`ReferenceRange` when
+    one is configured for the test, and otherwise falls back to the analyte
+    concept's global range.
+    """
+    value = result.value_numeric
+    if value is None:
+        return result.flag or ""
+
+    # Prefer a demographic reference range (resolved by test + patient).
+    rng = None
+    if result.test_order_id:
+        from apps.lis.automation_service import resolve_reference_range
+        rng = resolve_reference_range(
+            result.test_order.lab_test, result.analyte, result.test_order.patient
+        )
+    if rng is not None:
+        if rng.text_range and not result.reference_range:
+            result.reference_range = rng.text_range
+        return _flag_from_limits(
+            value, rng.low_normal, rng.hi_normal, rng.low_critical, rng.hi_critical
+        )
+
+    concept = result.analyte
+    return _flag_from_limits(
+        value, concept.low_normal, concept.hi_normal,
+        concept.low_critical, concept.hi_critical,
+    )
 
 
 @transaction.atomic

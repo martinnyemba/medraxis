@@ -178,3 +178,38 @@ future ML scorer.
 
 See `docs/openmrs_coverage.md` for the EMR-side coverage map; this section is the
 LIS/FLabs equivalent.
+
+---
+
+## 7. Design boundaries — why these models are NOT duplicates
+
+Adding the FLabs layer introduced several models that superficially resemble
+existing ones. Each is a deliberate, distinct concept; this table is the
+contract that keeps them from drifting into duplication.
+
+| Looks like a duplicate of… | …but is distinct because | Integration rule |
+|---|---|---|
+| `LabTest.analytes` (M2M) vs `TestProfile` vs `emr.OrderSet` | **analytes** = the result components *inside one test* (FBC → Hb, WBC). **TestProfile** = a priced catalogue *package of whole tests* a customer buys. **OrderSet** = a clinical *protocol* spanning order types (drugs + tests). | A `TestProfile` is the commercial/catalogue view; an `OrderSet` is the clinical view. They may coexist for the same bundle; neither stores result data. |
+| `lis.ReferringDoctor` vs `users.Provider` | **Provider** = internal actor who *authors/signs* records (clinical authorship & RBAC). **ReferringDoctor** = external party who *sends* work (marketing/commission). | A person who is both gets a `Provider` (for authorship) and a `ReferringDoctor` (for referral economics); link by name/identifier if needed. |
+| `lis.Client` vs `pos.Customer` | **Customer** = a retail/walk-in *payer* at the POS. **Client** = a *B2B account* (hospital/corporate) that sends batches on credit with a rate card. | Billing should treat a `Client` as a billable account alongside `Customer` (see follow-up below). |
+| `lis.CollectionCenter` vs `emr.Location` vs `tenancy.Organization` | **Organization** = the tenant/brand (data isolation). **Location** = the physical/organisational node. **CollectionCenter** = a *branch role* (collection→processing routing, home-collection). | `CollectionCenter.location` points at the `Location`; the brand is the tenant. No data duplication — it adds routing semantics. |
+| `lis.ReferenceRange` vs `Concept.{hi,low}_normal` | **Concept ranges** = a single global fallback. **ReferenceRange** = age/sex/method-specific. | **Single flagging path:** `services.compute_flag` prefers a `ReferenceRange` and falls back to the concept range, so manual entry and analyzer ingestion always agree. |
+| `lis.ReportDelivery` vs `notifications.Notification` | **Notification** = the generic async message + delivery engine. **ReportDelivery** = the LIS dispatch *record* (which report, which channel, status). | `ReportDelivery` **delegates** sending to `queue_notification`; it never sends directly. |
+| `lis.MicrobiologyResult` vs `lis.LabResult` | **LabResult** = a numeric/coded analyte value. **MicrobiologyResult** = culture growth + organism + antibiogram (a different shape). | Both release to the shared chart via `Obs`/`DiagnosticReport`; microbiology is not forced into a numeric row. |
+
+### Verified: the integration spine is unchanged
+`TestOrder` and `DrugOrder` remain multi-table-inheritance subclasses of the one
+`emr.Order`; released results still flow to the shared `emr.Obs` chart; reflex
+orders are created on that same `Order` spine via `previous_order`; report
+delivery rides the shared notifications engine; the stock ledger and tenancy
+were untouched. The lab additions are *peripheral context* hung off the existing
+spine, not a parallel system.
+
+### Known follow-up (integration gap, not a regression)
+Pricing has several legitimate sources (`LabTest.price`, `TestProfile.price`,
+`PriceListItem.price` per client, `Product.sale_price`, `BillableService.price`).
+Today `pos.SaleLine.unit_price` is entered explicitly and does not yet *resolve*
+from these. A single `resolve_price(billable, client)` service — and letting a
+`Sale` bill a `lis.Client` account, not only a `pos.Customer` — would complete
+the "one bill" promise. This is additive and does not contradict current
+behaviour; tracked as a follow-up.

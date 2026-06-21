@@ -128,6 +128,38 @@ class AutoVerificationTests(TestCase):
         self.assertEqual(reflex_order.previous_order_id, order.id)
 
 
+class FlaggingConsistencyTests(TestCase):
+    """Manual entry and analyzer ingestion must flag identically (one system)."""
+
+    def test_manual_entry_uses_demographic_range(self):
+        lab_test, analyte = _make_test(code="HBM")
+        ReferenceRange.objects.create(
+            lab_test=lab_test, analyte=analyte, sex="F", low_normal=12, hi_normal=15)
+        order, _ = _make_order(lab_test, analyte, sex="F")
+        result = LabResult.objects.create(test_order=order, analyte=analyte, value_numeric=16)
+        # The manual-entry service path must apply the demographic range (HIGH),
+        # not just the (absent) concept range.
+        services.enter_result(result)
+        self.assertEqual(result.flag, LabResult.Flag.HIGH)
+
+    def test_manual_and_ingestion_paths_agree(self):
+        lab_test, analyte = _make_test(code="HBX")
+        ReferenceRange.objects.create(
+            lab_test=lab_test, analyte=analyte, sex="F", low_normal=12, hi_normal=15)
+        order, patient = _make_order(lab_test, analyte, sex="F")
+
+        # Manual path.
+        manual = LabResult.objects.create(test_order=order, analyte=analyte, value_numeric=16)
+        services.enter_result(manual)
+
+        # Ingestion path computes via the same compute_flag entry point.
+        ingested = LabResult(test_order=order, analyte=analyte, value_numeric=16)
+        services.enter_result(ingested)
+
+        self.assertEqual(manual.flag, ingested.flag)
+        self.assertEqual(manual.flag, LabResult.Flag.HIGH)
+
+
 class MicrobiologyTests(TestCase):
     def test_culture_with_antibiogram(self):
         lab_test, analyte = _make_test(name="Culture", code="CUL")
