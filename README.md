@@ -42,6 +42,7 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 | [`docs/openmrs_coverage.md`](docs/openmrs_coverage.md) | Model-by-model coverage map vs. the OpenMRS Java domain model |
 | [`docs/flabs_research.md`](docs/flabs_research.md) | Reverse-engineered FLabs LIS analysis + gap closure (catalogue, B2B/branch, microbiology, QC, auto-verification, WhatsApp delivery) |
 | [`docs/business_ops_research.md`](docs/business_ops_research.md) | Reverse-engineered Valeron/Vyapar analysis + the accounting backbone (accounts, expenses, payables, party ledger, quotations, returns, GST) |
+| [`docs/payment_gateways.md`](docs/payment_gateways.md) | Payment-gateway design + Stripe / Flutterwave (mobile money) / Lenco integration |
 | [`SKILLS.md`](SKILLS.md) | Engineering standards followed by this project |
 
 ## Project structure
@@ -60,6 +61,7 @@ medraxis/
 │   ├── pos/                # Sale, SaleLine, Payment, Customer, PDF receipts
 │   ├── billing/            # BillableService, InsuranceScheme, PatientInsurance
 │   ├── finance/            # Cash/bank accounts, expenses, supplier payments, party ledger, GST components
+│   ├── payments/           # Payment gateways: Stripe, Flutterwave (mobile money), Lenco
 │   ├── notifications/      # Celery notifications + async report generation
 │   └── fhir/               # FHIR R4 read/search facade (/fhir/)
 ├── docs/                   # research, erd, requirements, api

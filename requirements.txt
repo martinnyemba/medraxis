@@ -19,5 +19,8 @@ redis>=5.0
 # PDF generation (receipts, specimen labels, lab reports)
 reportlab>=4.0
 
+# HTTP client for payment-gateway adapters (Stripe/Flutterwave/Lenco)
+requests>=2.31
+
 # WSGI server for production
 gunicorn>=22.0

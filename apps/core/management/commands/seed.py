@@ -230,6 +230,16 @@ class Command(BaseCommand):
         for cat in ["Rent", "Salaries", "Utilities", "Reagents & Consumables", "Maintenance"]:
             ExpenseCategory.objects.get_or_create(name=cat)
 
+        # A demo payment gateway (manual/test) settling into the bank account.
+        from apps.payments.models import PaymentGateway
+        bank, _ = FinancialAccount.objects.get_or_create(name="Bank Account")
+        PaymentGateway.objects.get_or_create(
+            name="Test Gateway",
+            defaults={"provider": "manual", "is_test": True,
+                      "supported_channels": ["CARD", "MOBILE_MONEY"],
+                      "settlement_account": bank},
+        )
+
     # ----------------------------------------------------- inventory/billing
     def _seed_inventory_billing(self, concepts):
         meds, _ = inv.ProductCategory.objects.get_or_create(name="Medicines")
