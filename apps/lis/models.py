@@ -12,6 +12,7 @@ from django.db import models
 
 from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata, TimeStampedModel
 from apps.emr.models import Order
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class LabSection(BaseOpenmrsMetadata):
@@ -75,7 +76,7 @@ class TestOrder(Order):
         verbose_name = "test order"
 
 
-class Specimen(BaseOpenmrsData):
+class Specimen(BaseOpenmrsData, TenantScopedModel):
     """A physical sample tracked by accession number through the lab."""
 
     class Status(models.TextChoices):
@@ -209,3 +210,33 @@ class Worklist(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class AnalyzerMessage(TimeStampedModel):
+    """An inbound raw message received from an analyzer, with its parse outcome.
+
+    Persisting the raw payload gives an auditable, replayable record of every
+    instrument transmission -- important when a result is queried clinically.
+    """
+
+    class Status(models.TextChoices):
+        RECEIVED = "RECEIVED", "Received"
+        PROCESSED = "PROCESSED", "Processed"
+        PARTIAL = "PARTIAL", "Partially processed"
+        FAILED = "FAILED", "Failed"
+
+    analyzer = models.ForeignKey(
+        Analyzer, on_delete=models.SET_NULL, null=True, blank=True, related_name="messages"
+    )
+    protocol = models.CharField(max_length=20, default="HL7")
+    raw_payload = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RECEIVED)
+    results_matched = models.PositiveIntegerField(default=0)
+    results_unmatched = models.PositiveIntegerField(default=0)
+    log = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.protocol} message [{self.status}] ({self.results_matched} matched)"

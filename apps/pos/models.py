@@ -12,6 +12,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db import models
 
 from apps.core.models import TimeStampedModel
+from apps.tenancy.mixins import TenantScopedModel
 
 # Currency lines round half-up to the minor unit (standard invoicing convention).
 _CENTS = Decimal("0.01")
@@ -40,7 +41,7 @@ class Customer(TimeStampedModel):
         return self.name
 
 
-class Sale(TimeStampedModel):
+class Sale(TimeStampedModel, TenantScopedModel):
     """An invoice / POS bill."""
 
     class Status(models.TextChoices):

@@ -9,6 +9,7 @@ query "everything ordered for this patient".
 from django.db import models
 
 from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class OrderType(BaseOpenmrsMetadata):
@@ -31,7 +32,7 @@ class CareSetting(BaseOpenmrsMetadata):
     )
 
 
-class Order(BaseOpenmrsData):
+class Order(BaseOpenmrsData, TenantScopedModel):
     """A request for a service or product for a patient."""
 
     class Action(models.TextChoices):

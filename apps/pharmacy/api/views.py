@@ -7,9 +7,10 @@ from apps.inventory.services import InsufficientStock
 from apps.pharmacy import models as m
 from apps.pharmacy import services
 from apps.pharmacy.api.serializers import DispenseSerializer, DrugOrderSerializer
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
-class DrugOrderViewSet(viewsets.ModelViewSet):
+class DrugOrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.DrugOrder.objects.select_related("patient", "drug", "orderer")
     serializer_class = DrugOrderSerializer
     permission_classes = [IsAuthenticated]

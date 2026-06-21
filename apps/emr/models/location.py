@@ -8,13 +8,14 @@ let a location play multiple roles (e.g. both "Login Location" and
 from django.db import models
 
 from apps.core.models import BaseOpenmrsMetadata
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class LocationTag(BaseOpenmrsMetadata):
     """A role label that can be applied to locations."""
 
 
-class Location(BaseOpenmrsMetadata):
+class Location(BaseOpenmrsMetadata, TenantScopedModel):
     """A node in the location hierarchy (facility -> ward -> room ...)."""
 
     parent = models.ForeignKey(

@@ -10,6 +10,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.models import BaseOpenmrsMetadata, TimeStampedModel
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class UnitOfMeasure(BaseOpenmrsMetadata):
@@ -50,7 +51,7 @@ class Supplier(BaseOpenmrsMetadata):
     tax_identifier = models.CharField(max_length=64, blank=True, default="")
 
 
-class Product(BaseOpenmrsMetadata):
+class Product(BaseOpenmrsMetadata, TenantScopedModel):
     """A sellable/dispensable item -- a drug, consumable or general good."""
 
     sku = models.CharField(max_length=64, unique=True, db_index=True)

@@ -7,6 +7,7 @@ is the container that observations and orders attach to, and records *who*
 from django.db import models
 
 from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class EncounterType(BaseOpenmrsMetadata):
@@ -17,7 +18,7 @@ class EncounterRole(BaseOpenmrsMetadata):
     """The capacity in which a provider participates (e.g. Consulting Clinician)."""
 
 
-class Encounter(BaseOpenmrsData):
+class Encounter(BaseOpenmrsData, TenantScopedModel):
     """A clinical interaction; the parent of observations and orders."""
 
     patient = models.ForeignKey(

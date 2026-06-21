@@ -21,6 +21,9 @@ from apps.billing.models import BillableService
 from apps.emr import models as emr
 from apps.inventory import models as inv
 from apps.lis import models as lis
+from apps.notifications.models import NotificationTemplate
+from apps.tenancy.context import organization_context
+from apps.tenancy.models import Membership, Organization
 from apps.users.models import Privilege, Provider, Role, User
 
 PRIVILEGES = [
@@ -50,6 +53,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Seeding privileges & roles...")
         self._seed_rbac()
+        self.stdout.write("Seeding organization (tenant)...")
+        organization = self._seed_tenancy()
+        self.stdout.write("Seeding notification templates...")
+        self._seed_templates()
         self.stdout.write("Seeding clinical metadata...")
         concepts = self._seed_concepts()
         self.stdout.write("Seeding locations & encounter types...")
@@ -60,8 +67,35 @@ class Command(BaseCommand):
         self._seed_inventory_billing(concepts)
         if options["demo"]:
             self.stdout.write("Seeding demo dataset...")
-            self._seed_demo(concepts)
+            # Demo data is owned by the demo organization (tenant).
+            with organization_context(organization):
+                self._seed_demo(concepts)
         self.stdout.write(self.style.SUCCESS("Seeding complete."))
+
+    # -------------------------------------------------------------- tenancy
+    def _seed_tenancy(self):
+        organization, _ = Organization.objects.get_or_create(
+            slug="demo-clinic",
+            defaults={"name": "Demo Clinic", "org_type": Organization.OrgType.CLINIC},
+        )
+        admin = User.objects.filter(username="admin").first()
+        if admin is not None:
+            Membership.objects.get_or_create(
+                user=admin, organization=organization,
+                defaults={"is_default": True, "is_admin": True},
+            )
+        return organization
+
+    def _seed_templates(self):
+        NotificationTemplate.objects.get_or_create(
+            code="critical-result",
+            defaults={
+                "description": "Critical lab result alert",
+                "subject_template": "Critical result for {{ patient }}",
+                "body_template": "{{ analyte }} = {{ value }} ({{ flag }}) for order {{ order }}.",
+                "default_channel": "in_app",
+            },
+        )
 
     # ------------------------------------------------------------------ RBAC
     def _seed_rbac(self):

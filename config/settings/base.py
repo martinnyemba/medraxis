@@ -63,6 +63,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.core",
+    "apps.tenancy",
     "apps.users",
     "apps.emr",
     "apps.lis",
@@ -70,6 +71,8 @@ LOCAL_APPS = [
     "apps.pharmacy",
     "apps.pos",
     "apps.billing",
+    "apps.notifications",
+    "apps.fhir",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -88,6 +91,8 @@ MIDDLEWARE = [
     # Project middleware (cross-cutting concerns only, no business logic).
     "apps.core.middleware.request_id.RequestIDMiddleware",
     "apps.core.middleware.audit_user.CurrentUserMiddleware",
+    # Tenant resolution must run after authentication so the user is known.
+    "apps.tenancy.middleware.TenantMiddleware",
     "apps.core.middleware.request_logging.RequestLoggingMiddleware",
 ]
 

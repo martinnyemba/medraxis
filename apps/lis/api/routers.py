@@ -1,4 +1,5 @@
 from apps.lis.api.views import (
+    AnalyzerMessageViewSet,
     AnalyzerViewSet,
     LabResultViewSet,
     LabSectionViewSet,
@@ -15,3 +16,4 @@ def register_routes(router):
     router.register("lab/specimens", SpecimenViewSet, basename="specimen")
     router.register("lab/results", LabResultViewSet, basename="lab-result")
     router.register("lab/analyzers", AnalyzerViewSet, basename="analyzer")
+    router.register("lab/messages", AnalyzerMessageViewSet, basename="analyzer-message")

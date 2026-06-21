@@ -38,6 +38,7 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 | [`docs/requirements.md`](docs/requirements.md) | Roles, user stories, functional & non-functional requirements |
 | [`docs/erd.md`](docs/erd.md) | Mermaid ER diagrams per domain + normalization notes |
 | [`docs/api.md`](docs/api.md) | API reference, auth, conventions, workflow actions |
+| [`docs/platform_features.md`](docs/platform_features.md) | FHIR facade, HL7/ASTM interfacing, async notifications/reports, PDF printing, multi-tenancy |
 | [`SKILLS.md`](SKILLS.md) | Engineering standards followed by this project |
 
 ## Project structure
@@ -46,14 +47,17 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 medraxis/
 ├── config/                 # settings (base/local/production), urls, celery, api_router
 ├── apps/
-│   ├── core/               # OpenMRS base models, middleware, audit, RBAC plumbing
+│   ├── core/               # OpenMRS base models, middleware, audit, RBAC plumbing, PDF helpers
+│   ├── tenancy/            # Organization (tenant), Membership, request scoping
 │   ├── users/              # custom User, Role/Privilege RBAC, Provider
 │   ├── emr/                # Concept dictionary, Person/Patient, Encounter, Obs, Order, Programs
-│   ├── lis/                # LabTest catalogue, TestOrder, Specimen, LabResult, Analyzer
+│   ├── lis/                # LabTest, TestOrder, Specimen, LabResult, Analyzer, HL7/ASTM drivers
 │   ├── inventory/          # Product, StockBatch, StockTransaction ledger, PurchaseOrder
 │   ├── pharmacy/           # DrugOrder, Dispense (stock-coupled)
-│   ├── pos/                # Sale, SaleLine, Payment, Customer
-│   └── billing/            # BillableService, InsuranceScheme, PatientInsurance
+│   ├── pos/                # Sale, SaleLine, Payment, Customer, PDF receipts
+│   ├── billing/            # BillableService, InsuranceScheme, PatientInsurance
+│   ├── notifications/      # Celery notifications + async report generation
+│   └── fhir/               # FHIR R4 read/search facade (/fhir/)
 ├── docs/                   # research, erd, requirements, api
 ├── manage.py
 ├── requirements.txt
@@ -126,12 +130,27 @@ server-side RBAC on protected endpoints · throttling · audit log + soft-delete
 trails · immutable payments & append-only stock ledger · production hardening
 (HTTPS/HSTS/secure cookies). See [`docs/requirements.md`](docs/requirements.md).
 
+## Platform capabilities
+
+Built on top of the core domains (see [`docs/platform_features.md`](docs/platform_features.md)):
+
+- **FHIR R4 facade** at `/fhir/` (Patient, Encounter, Observation, ServiceRequest,
+  MedicationRequest, DiagnosticReport, Organization) with tenant scoping.
+- **Analyzer interfacing**: dependency-free HL7 v2 and ASTM drivers that ingest
+  instrument results, match them to open orders and record auto-flagged results.
+- **Async notifications & reports** via Celery (email/SMS/in-app, idempotent;
+  CSV report generation) — runs eagerly without a broker in dev/tests.
+- **PDF printing**: invoices/receipts, specimen labels and patient lab reports.
+- **Multi-tenant facility scoping**: row-level isolation by `Organization`,
+  fail-closed on unauthorized `X-Organization` headers.
+
 ## Status
 
-Data model, migrations, REST API, the core integrative workflows, seed data,
-tests and docs are implemented across all eight apps. FHIR REST facade,
-HL7/ASTM analyzer drivers, Celery notification/report tasks and a front-end are
-designed-for and on the roadmap — none require reworking the data model.
+Implemented across eleven apps: full data model, migrations, REST API, the
+integrative clinical/lab/pharmacy/POS workflows, the platform capabilities
+above, seed data, **31 passing tests**, and documentation. A front-end and
+write-side FHIR remain on the roadmap — neither requires reworking the data
+model.
 
 ## License & attribution
 

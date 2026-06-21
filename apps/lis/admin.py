@@ -29,5 +29,14 @@ class TestOrderAdmin(admin.ModelAdmin):
     search_fields = ("order_number",)
 
 
+@admin.register(m.AnalyzerMessage)
+class AnalyzerMessageAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "protocol", "analyzer", "status",
+                    "results_matched", "results_unmatched")
+    list_filter = ("protocol", "status")
+    date_hierarchy = "created_at"
+    readonly_fields = ("raw_payload", "log", "results_matched", "results_unmatched")
+
+
 for model in (m.LabSection, m.SpecimenType, m.Analyzer, m.Worklist):
     admin.site.register(model)

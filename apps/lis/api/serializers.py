@@ -50,3 +50,22 @@ class AnalyzerSerializer(serializers.ModelSerializer):
         fields = ["id", "uuid", "name", "section", "manufacturer", "model_number",
                   "protocol", "is_bidirectional", "retired"]
         read_only_fields = ["uuid", "retired"]
+
+
+class AnalyzerMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.AnalyzerMessage
+        fields = ["id", "analyzer", "protocol", "raw_payload", "status",
+                  "results_matched", "results_unmatched", "log", "created_at"]
+        read_only_fields = ["status", "results_matched", "results_unmatched",
+                            "log", "created_at"]
+
+
+class IngestMessageSerializer(serializers.Serializer):
+    """Input for posting a raw analyzer transmission for ingestion."""
+
+    protocol = serializers.ChoiceField(choices=["HL7", "ASTM"], default="HL7")
+    raw_payload = serializers.CharField(style={"base_template": "textarea.html"})
+    analyzer = serializers.PrimaryKeyRelatedField(
+        queryset=m.Analyzer.objects.all(), required=False, allow_null=True
+    )

@@ -8,6 +8,7 @@ each of which is defined by a :class:`PatientIdentifierType`.
 from django.db import models
 
 from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class PatientIdentifierType(BaseOpenmrsMetadata):
@@ -29,7 +30,7 @@ class PatientIdentifierType(BaseOpenmrsMetadata):
     )
 
 
-class Patient(BaseOpenmrsData):
+class Patient(BaseOpenmrsData, TenantScopedModel):
     """A person who receives care -- the central EMR record."""
 
     person = models.OneToOneField(

@@ -16,5 +16,8 @@ psycopg2-binary>=2.9          # PostgreSQL (production)
 celery>=5.4,<6.0
 redis>=5.0
 
+# PDF generation (receipts, specimen labels, lab reports)
+reportlab>=4.0
+
 # WSGI server for production
 gunicorn>=22.0

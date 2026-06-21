@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from apps.inventory import models as m
 from apps.inventory import services
+from apps.tenancy.mixins import TenantScopedQuerySetMixin
 from apps.inventory.api.serializers import (
     ProductCategorySerializer,
     ProductSerializer,
@@ -37,7 +38,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "contact_person", "phone", "tax_identifier"]
 
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.Product.objects.select_related("category", "unit", "tax_rate")
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]

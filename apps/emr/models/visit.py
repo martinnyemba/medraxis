@@ -6,13 +6,14 @@ encounters that happen during one interaction with the facility.
 from django.db import models
 
 from apps.core.models import BaseOpenmrsData, BaseOpenmrsMetadata
+from apps.tenancy.mixins import TenantScopedModel
 
 
 class VisitType(BaseOpenmrsMetadata):
     """Outpatient, Inpatient, Emergency, Lab Walk-in, Pharmacy Sale, ..."""
 
 
-class Visit(BaseOpenmrsData):
+class Visit(BaseOpenmrsData, TenantScopedModel):
     """A bounded period during which care/services are provided."""
 
     patient = models.ForeignKey(
