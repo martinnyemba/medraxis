@@ -1,9 +1,15 @@
 from apps.emr.api.views import (
+    CohortViewSet,
     ConceptViewSet,
+    DrugViewSet,
     EncounterViewSet,
+    FormViewSet,
     ObsViewSet,
+    OrderFrequencyViewSet,
     OrderViewSet,
     PatientViewSet,
+    RelationshipTypeViewSet,
+    RelationshipViewSet,
     VisitViewSet,
 )
 
@@ -15,3 +21,9 @@ def register_routes(router):
     router.register("encounters", EncounterViewSet, basename="encounter")
     router.register("observations", ObsViewSet, basename="obs")
     router.register("orders", OrderViewSet, basename="order")
+    router.register("drugs", DrugViewSet, basename="drug")
+    router.register("order-frequencies", OrderFrequencyViewSet, basename="order-frequency")
+    router.register("relationship-types", RelationshipTypeViewSet, basename="relationship-type")
+    router.register("relationships", RelationshipViewSet, basename="relationship")
+    router.register("cohorts", CohortViewSet, basename="cohort")
+    router.register("forms", FormViewSet, basename="form")

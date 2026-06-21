@@ -59,7 +59,8 @@ def _order_qs():
 def _drug_order_qs():
     from apps.pharmacy.models import DrugOrder
 
-    return DrugOrder.objects.select_related("patient", "drug")
+    return DrugOrder.objects.select_related(
+        "patient", "drug", "drug_formulation__concept", "order_frequency")
 
 
 def _test_order_qs():

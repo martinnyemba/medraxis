@@ -137,3 +137,54 @@ class OrderSerializer(serializers.ModelSerializer):
                   "instructions", "date_activated", "scheduled_date", "date_stopped",
                   "fulfiller_status", "fulfiller_comment", "voided"]
         read_only_fields = ["uuid", "order_number", "voided"]
+
+
+class RelationshipTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.RelationshipType
+        fields = ["id", "uuid", "name", "a_is_to_b", "b_is_to_a", "weight", "retired"]
+        read_only_fields = ["uuid", "retired"]
+
+
+class RelationshipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.Relationship
+        fields = ["id", "uuid", "person_a", "person_b", "relationship_type",
+                  "start_date", "end_date", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class DrugSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.Drug
+        fields = ["id", "uuid", "name", "concept", "combination", "dosage_form",
+                  "strength", "dose_units", "maximum_daily_dose", "minimum_daily_dose",
+                  "retired"]
+        read_only_fields = ["uuid", "retired"]
+
+
+class OrderFrequencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.OrderFrequency
+        fields = ["id", "uuid", "name", "concept", "frequency_per_day", "retired"]
+        read_only_fields = ["uuid", "retired"]
+
+
+class CohortSerializer(serializers.ModelSerializer):
+    member_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = m.Cohort
+        fields = ["id", "uuid", "name", "description", "member_count", "retired"]
+        read_only_fields = ["uuid", "retired", "member_count"]
+
+    def get_member_count(self, obj):
+        return obj.memberships.filter(end_date__isnull=True).count()
+
+
+class FormSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.Form
+        fields = ["id", "uuid", "name", "version", "build", "published",
+                  "encounter_type", "retired"]
+        read_only_fields = ["uuid", "retired"]

@@ -69,6 +69,10 @@ class Product(BaseOpenmrsMetadata, TenantScopedModel):
     drug_concept = models.ForeignKey(
         "emr.Concept", on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
     )
+    # Link to the specific clinical formulation (OpenMRS Drug), when applicable.
+    drug = models.ForeignKey(
+        "emr.Drug", on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
+    )
     is_drug = models.BooleanField(default=False)
     is_controlled = models.BooleanField(default=False, help_text="Controlled/scheduled drug.")
     strength = models.CharField(max_length=64, blank=True, default="")

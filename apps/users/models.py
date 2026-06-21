@@ -19,6 +19,7 @@ circular migration dependencies, the demographic ``Person`` record lives in
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from apps.core.attributes import BaseAttribute, BaseAttributeType
 from apps.core.models import BaseOpenmrsMetadata, TimeStampedModel
 
 
@@ -143,3 +144,20 @@ class Provider(BaseOpenmrsMetadata):
 
     def __str__(self):
         return f"{self.name} ({self.identifier})"
+
+
+class ProviderAttributeType(BaseAttributeType):
+    """Defines a custom attribute attachable to a Provider.
+
+    e.g. 'Specialty', 'License expiry', 'Council number type' -- the OpenMRS
+    customizable-attribute pattern applied to providers.
+    """
+
+
+class ProviderAttribute(BaseAttribute):
+    provider = models.ForeignKey(
+        Provider, on_delete=models.CASCADE, related_name="attributes"
+    )
+    attribute_type = models.ForeignKey(
+        ProviderAttributeType, on_delete=models.PROTECT, related_name="values"
+    )

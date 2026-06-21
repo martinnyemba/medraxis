@@ -1,7 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from apps.users.models import Privilege, Provider, Role, User
+from apps.users.models import (
+    Privilege,
+    Provider,
+    ProviderAttributeType,
+    Role,
+    User,
+)
 
 
 @admin.register(Privilege)
@@ -32,3 +38,9 @@ class ProviderAdmin(admin.ModelAdmin):
     list_display = ("name", "identifier", "provider_role", "user", "retired")
     list_filter = ("provider_role", "retired")
     search_fields = ("name", "identifier")
+
+
+@admin.register(ProviderAttributeType)
+class ProviderAttributeTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "datatype", "min_occurs", "max_occurs", "retired")
+    search_fields = ("name",)

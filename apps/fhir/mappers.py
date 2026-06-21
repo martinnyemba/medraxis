@@ -128,15 +128,23 @@ def service_request_to_fhir(order):
 
 
 def medication_request_to_fhir(drug_order):
+    timing = drug_order.order_frequency.name if drug_order.order_frequency_id \
+        else drug_order.frequency
     dosage = {"text": drug_order.dosing_instructions or
               " ".join(p for p in [str(drug_order.dose or ""), drug_order.dose_units,
-                                   drug_order.frequency, drug_order.route] if p)}
+                                   timing, drug_order.route] if p)}
+    # Prefer the coded clinical formulation (Drug) over the stock product name.
+    if drug_order.drug_formulation_id:
+        medication = _codeable_concept(drug_order.drug_formulation.concept)
+        medication["text"] = drug_order.drug_formulation.name
+    else:
+        medication = {"text": drug_order.drug.name}
     return {
         "resourceType": "MedicationRequest",
         "id": str(drug_order.uuid),
         "status": ORDER_STATUS_MAP.get(drug_order.fulfiller_status, "active"),
         "intent": "order",
-        "medicationCodeableConcept": {"text": drug_order.drug.name},
+        "medicationCodeableConcept": medication,
         "subject": {"reference": f"Patient/{drug_order.patient.uuid}"},
         "authoredOn": drug_order.date_activated.isoformat(),
         "dosageInstruction": [dosage],
