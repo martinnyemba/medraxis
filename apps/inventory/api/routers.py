@@ -1,6 +1,7 @@
 from apps.inventory.api.views import (
     ProductCategoryViewSet,
     ProductViewSet,
+    PurchaseBillViewSet,
     PurchaseOrderViewSet,
     StockBatchViewSet,
     StockTransactionViewSet,
@@ -17,3 +18,4 @@ def register_routes(router):
     router.register("inventory/batches", StockBatchViewSet, basename="stock-batch")
     router.register("inventory/transactions", StockTransactionViewSet, basename="stock-transaction")
     router.register("inventory/purchase-orders", PurchaseOrderViewSet, basename="purchase-order")
+    router.register("inventory/purchase-bills", PurchaseBillViewSet, basename="purchase-bill")

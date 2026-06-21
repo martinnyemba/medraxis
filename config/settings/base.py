@@ -71,6 +71,7 @@ LOCAL_APPS = [
     "apps.pharmacy",
     "apps.pos",
     "apps.billing",
+    "apps.finance",
     "apps.notifications",
     "apps.fhir",
 ]

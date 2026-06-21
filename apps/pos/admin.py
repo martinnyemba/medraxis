@@ -33,3 +33,28 @@ class CustomerAdmin(admin.ModelAdmin):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ("created_at", "sale", "method", "amount", "status")
     list_filter = ("method", "status")
+
+
+class QuotationLineInline(admin.TabularInline):
+    model = m.QuotationLine
+    extra = 0
+
+
+@admin.register(m.Quotation)
+class QuotationAdmin(admin.ModelAdmin):
+    list_display = ("quotation_number", "status", "customer", "client", "grand_total",
+                    "converted_sale")
+    list_filter = ("status",)
+    inlines = [QuotationLineInline]
+
+
+class SalesReturnLineInline(admin.TabularInline):
+    model = m.SalesReturnLine
+    extra = 0
+
+
+@admin.register(m.SalesReturn)
+class SalesReturnAdmin(admin.ModelAdmin):
+    list_display = ("return_number", "sale", "return_date", "total", "status", "restock")
+    list_filter = ("status", "restock")
+    inlines = [SalesReturnLineInline]

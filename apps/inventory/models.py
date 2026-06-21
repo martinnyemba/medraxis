@@ -201,3 +201,86 @@ class PurchaseOrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product.sku} x {self.quantity_ordered}"
+
+
+class PurchaseBill(TimeStampedModel, TenantScopedModel):
+    """A supplier's invoice (payable). The financial counterpart of a receipt.
+
+    Where a ``PurchaseOrder`` is a *request*, a ``PurchaseBill`` is the *bill*
+    received from the supplier. Recording one creates a payable on the supplier's
+    party ledger and (optionally) receives the stock through the inventory ledger.
+    """
+
+    class Status(models.TextChoices):
+        UNPAID = "UNPAID", "Unpaid"
+        PARTIAL = "PARTIAL", "Partially paid"
+        PAID = "PAID", "Paid"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    bill_number = models.CharField(max_length=64, unique=True, db_index=True)
+    supplier = models.ForeignKey(
+        Supplier, on_delete=models.PROTECT, related_name="bills"
+    )
+    purchase_order = models.ForeignKey(
+        PurchaseOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name="bills"
+    )
+    location = models.ForeignKey(
+        "emr.Location", on_delete=models.PROTECT, related_name="purchase_bills"
+    )
+    bill_date = models.DateField(db_index=True)
+    supplier_invoice_no = models.CharField(max_length=64, blank=True, default="")
+    subtotal = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    tax_total = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    grand_total = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    amount_paid = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.UNPAID)
+    note = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ["-bill_date", "-id"]
+        indexes = [models.Index(fields=["supplier", "status"])]
+
+    def __str__(self):
+        return self.bill_number
+
+    @property
+    def balance_due(self):
+        return self.grand_total - self.amount_paid
+
+    def recalculate(self):
+        from decimal import Decimal
+        subtotal = Decimal("0")
+        tax = Decimal("0")
+        for item in self.items.all():
+            subtotal += item.line_subtotal
+            tax += item.line_tax
+        self.subtotal = subtotal
+        self.tax_total = tax
+        self.grand_total = subtotal + tax
+        return self
+
+
+class PurchaseBillItem(models.Model):
+    """A line on a purchase bill."""
+
+    purchase_bill = models.ForeignKey(
+        PurchaseBill, on_delete=models.CASCADE, related_name="items"
+    )
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="bill_items")
+    quantity = models.DecimalField(max_digits=14, decimal_places=2)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    batch_number = models.CharField(max_length=64, blank=True, default="")
+    expiry_date = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.product.sku} x {self.quantity}"
+
+    @property
+    def line_subtotal(self):
+        return self.quantity * self.unit_cost
+
+    @property
+    def line_tax(self):
+        from decimal import Decimal
+        return (self.line_subtotal * self.tax_percent / Decimal("100"))

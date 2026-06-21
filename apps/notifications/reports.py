@@ -118,7 +118,72 @@ REPORT_REGISTRY = {
     "stock_valuation": stock_valuation,
     "expiring_stock": expiring_stock,
     "lab_turnaround": lab_turnaround,
+    "expense_summary": lambda p, o: _expense_summary(p, o),
+    "outstanding_balances": lambda p, o: _outstanding_balances(p, o),
+    "day_book": lambda p, o: _day_book(p, o),
 }
+
+
+def _expense_summary(parameters, organization):
+    """Total expenses per category over an optional date range."""
+    from django.db.models import Sum
+    from apps.finance.models import Expense
+
+    qs = Expense.objects.all()
+    if organization is not None:
+        qs = qs.filter(organization=organization)
+    start = _parse_date(parameters.get("start"))
+    end = _parse_date(parameters.get("end"))
+    if start:
+        qs = qs.filter(expense_date__gte=start)
+    if end:
+        qs = qs.filter(expense_date__lte=end)
+    rows = (
+        [r["category__name"], r["total"]]
+        for r in qs.values("category__name").annotate(total=Sum("amount")).order_by("-total")
+    )
+    content, count = _csv(["category", "total"], rows)
+    return f"expense_summary_{timezone.now():%Y%m%d_%H%M%S}.csv", content, count
+
+
+def _outstanding_balances(parameters, organization):
+    """Current receivable/payable balance per party (from the party ledger)."""
+    from apps.finance.models import PartyLedgerEntry
+
+    qs = PartyLedgerEntry.objects.all()
+    if organization is not None:
+        qs = qs.filter(organization=organization)
+
+    # Latest balance per party is the most recent entry's running balance.
+    latest = {}
+    for e in qs.order_by("party_content_type", "party_object_id", "entry_date", "id"):
+        latest[(e.party_content_type_id, e.party_object_id)] = (e.party, e.balance)
+    rows = []
+    for (_, _), (party, balance) in latest.items():
+        if balance == 0:
+            continue
+        kind = "receivable" if balance > 0 else "payable"
+        rows.append([str(party), kind, abs(balance)])
+    content, count = _csv(["party", "type", "amount"], rows)
+    return f"outstanding_{timezone.now():%Y%m%d_%H%M%S}.csv", content, count
+
+
+def _day_book(parameters, organization):
+    """All money movements (in/out) on a given date (default today)."""
+    from apps.finance.models import AccountTransaction
+
+    day = _parse_date(parameters.get("date")) or timezone.now().date()
+    qs = AccountTransaction.objects.filter(occurred_at__date=day).select_related("account")
+    if organization is not None:
+        qs = qs.filter(account__organization=organization)
+    rows = (
+        [t.occurred_at.isoformat(), t.account.name, t.direction, t.amount,
+         t.balance_after, t.reference_type, t.reference_id]
+        for t in qs.order_by("occurred_at")
+    )
+    header = ["time", "account", "direction", "amount", "balance_after", "ref_type", "ref_id"]
+    content, count = _csv(header, rows)
+    return f"day_book_{day:%Y%m%d}.csv", content, count
 
 
 def run_report(report_type, parameters, organization):

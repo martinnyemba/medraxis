@@ -59,16 +59,19 @@ class Command(BaseCommand):
         self._seed_templates()
         self.stdout.write("Seeding clinical metadata...")
         concepts = self._seed_concepts()
-        self.stdout.write("Seeding locations & encounter types...")
-        self._seed_metadata()
-        self.stdout.write("Seeding lab catalogue...")
-        self._seed_lab(concepts)
-        self.stdout.write("Seeding inventory & billing...")
-        self._seed_inventory_billing(concepts)
-        if options["demo"]:
-            self.stdout.write("Seeding demo dataset...")
-            # Demo data is owned by the demo organization (tenant).
-            with organization_context(organization):
+        # Tenant-scoped data (locations, products, accounts, demo records) is
+        # owned by the demo organization so members of that tenant can see it.
+        with organization_context(organization):
+            self.stdout.write("Seeding locations & encounter types...")
+            self._seed_metadata()
+            self.stdout.write("Seeding lab catalogue...")
+            self._seed_lab(concepts)
+            self.stdout.write("Seeding inventory & billing...")
+            self._seed_inventory_billing(concepts)
+            self.stdout.write("Seeding finance accounts & expense categories...")
+            self._seed_finance()
+            if options["demo"]:
+                self.stdout.write("Seeding demo dataset...")
                 self._seed_demo(concepts)
         self.stdout.write(self.style.SUCCESS("Seeding complete."))
 
@@ -211,6 +214,21 @@ class Command(BaseCommand):
                          ("Ceftriaxone", "CRO")]:
             lis.Antibiotic.objects.get_or_create(
                 name=ab, defaults={"abbreviation": abbr})
+
+    # -------------------------------------------------------------- finance
+    def _seed_finance(self):
+        from apps.finance.models import ExpenseCategory, FinancialAccount
+
+        FinancialAccount.objects.get_or_create(
+            name="Main Cash Drawer",
+            defaults={"account_type": FinancialAccount.AccountType.CASH, "is_default": True},
+        )
+        FinancialAccount.objects.get_or_create(
+            name="Bank Account",
+            defaults={"account_type": FinancialAccount.AccountType.BANK},
+        )
+        for cat in ["Rent", "Salaries", "Utilities", "Reagents & Consumables", "Maintenance"]:
+            ExpenseCategory.objects.get_or_create(name=cat)
 
     # ----------------------------------------------------- inventory/billing
     def _seed_inventory_billing(self, concepts):

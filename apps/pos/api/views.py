@@ -1,5 +1,5 @@
 from django.http import HttpResponse
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +9,13 @@ from apps.inventory.services import InsufficientStock
 from apps.tenancy.mixins import TenantScopedQuerySetMixin
 from apps.pos import models as m
 from apps.pos import services
-from apps.pos.api.serializers import CustomerSerializer, PaymentSerializer, SaleSerializer
+from apps.pos.api.serializers import (
+    CustomerSerializer,
+    PaymentSerializer,
+    QuotationSerializer,
+    SaleSerializer,
+    SalesReturnSerializer,
+)
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -66,16 +72,22 @@ class SaleViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def pay(self, request, pk=None):
-        """Record a payment against the sale."""
+        """Record a payment against the sale (optionally into a financial account)."""
         sale = self.get_object()
         method = request.data.get("method", m.Payment.Method.CASH)
         amount = request.data.get("amount")
         if amount is None:
             raise ValidationError("'amount' is required.")
+        account = None
+        account_id = request.data.get("account")
+        if account_id:
+            from apps.finance.models import FinancialAccount
+            account = FinancialAccount.objects.filter(pk=account_id).first()
         services.add_payment(
             sale, method=method, amount=amount,
             reference=request.data.get("reference", ""),
             received_by=request.user if request.user.is_authenticated else None,
+            account=account,
         )
         return Response(self.get_serializer(sale).data)
 
@@ -85,3 +97,39 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["sale", "method", "status"]
+
+
+class QuotationViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
+    queryset = m.Quotation.objects.select_related(
+        "customer", "client", "patient", "location").prefetch_related("lines")
+    serializer_class = QuotationSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["status", "customer", "client", "patient"]
+    search_fields = ["quotation_number"]
+
+    def perform_create(self, serializer):
+        serializer.save(quotation_number=services.next_quotation_number())
+
+    @action(detail=True, methods=["post"])
+    def convert(self, request, pk=None):
+        """Convert this quotation into a Sale."""
+        quotation = self.get_object()
+        sale = services.convert_quotation_to_sale(quotation)
+        return Response(SaleSerializer(sale).data, status=status.HTTP_201_CREATED)
+
+
+class SalesReturnViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
+    queryset = m.SalesReturn.objects.select_related("sale", "location").prefetch_related("lines")
+    serializer_class = SalesReturnSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["status", "sale"]
+
+    def perform_create(self, serializer):
+        serializer.save(return_number=services.next_return_number())
+
+    @action(detail=True, methods=["post"])
+    def process(self, request, pk=None):
+        """Complete the return: restock goods and credit the party."""
+        sales_return = self.get_object()
+        services.process_sales_return(sales_return)
+        return Response(self.get_serializer(sales_return).data)
