@@ -1,6 +1,14 @@
 import { api } from "@/lib/api/client";
 import type { Paginated } from "@/lib/api/types";
-import type { Customer, Payment, Sale, SaleCreateInput, PaymentMethod } from "./types";
+import type {
+  Customer,
+  Payment,
+  Sale,
+  SaleCreateInput,
+  PaymentMethod,
+  SalesReturn,
+  SalesReturnCreateInput,
+} from "./types";
 
 type ListParams = Record<string, string | number | boolean | undefined | null>;
 
@@ -20,4 +28,12 @@ export const posApi = {
 
   // Payments (read-only ledger) -------------------------------------------
   listPayments: (params?: ListParams) => api.get<Paginated<Payment>>("/pos/payments/", params),
+
+  // Sales returns ------------------------------------------------------------
+  listSalesReturns: (params?: ListParams) =>
+    api.get<Paginated<SalesReturn>>("/pos/sales-returns/", params),
+  getSalesReturn: (id: number) => api.get<SalesReturn>(`/pos/sales-returns/${id}/`),
+  createSalesReturn: (data: SalesReturnCreateInput) =>
+    api.post<SalesReturn>("/pos/sales-returns/", data),
+  processSalesReturn: (id: number) => api.post<SalesReturn>(`/pos/sales-returns/${id}/process/`),
 };

@@ -26,6 +26,7 @@ const SalesListPage = named(() => import("@/features/pos/SalesListPage"), "Sales
 const NewSalePage = named(() => import("@/features/pos/NewSalePage"), "NewSalePage");
 const SaleDetailPage = named(() => import("@/features/pos/SaleDetailPage"), "SaleDetailPage");
 const CustomersPage = named(() => import("@/features/pos/CustomersPage"), "CustomersPage");
+const SalesReturnsPage = named(() => import("@/features/pos/SalesReturnsPage"), "SalesReturnsPage");
 const PrescriptionsListPage = named(() => import("@/features/pharmacy/PrescriptionsListPage"), "PrescriptionsListPage");
 const NewPrescriptionPage = named(() => import("@/features/pharmacy/NewPrescriptionPage"), "NewPrescriptionPage");
 const PrescriptionDetailPage = named(() => import("@/features/pharmacy/PrescriptionDetailPage"), "PrescriptionDetailPage");
@@ -33,6 +34,7 @@ const ProductsListPage = named(() => import("@/features/inventory/ProductsListPa
 const ProductDetailPage = named(() => import("@/features/inventory/ProductDetailPage"), "ProductDetailPage");
 const SuppliersPage = named(() => import("@/features/inventory/SuppliersPage"), "SuppliersPage");
 const StockLedgerPage = named(() => import("@/features/inventory/StockLedgerPage"), "StockLedgerPage");
+const ExpiringBatchesPage = named(() => import("@/features/inventory/ExpiringBatchesPage"), "ExpiringBatchesPage");
 const PurchaseOrdersPage = named(() => import("@/features/inventory/PurchaseOrdersPage"), "PurchaseOrdersPage");
 const BillableServicesPage = named(() => import("@/features/billing/BillableServicesPage"), "BillableServicesPage");
 const InsurancePage = named(() => import("@/features/billing/InsurancePage"), "InsurancePage");
@@ -106,6 +108,7 @@ export default function App() {
                       <Route path="sales" element={<SalesListPage />} />
                       <Route path="sales/new" element={<NewSalePage />} />
                       <Route path="sales/:saleId" element={<SaleDetailPage />} />
+                      <Route path="returns" element={<SalesReturnsPage />} />
                       <Route path="customers" element={<CustomersPage />} />
                     </Routes>
                   </Suspense>
@@ -138,6 +141,7 @@ export default function App() {
                       <Route path="products/:productId" element={<ProductDetailPage />} />
                       <Route path="suppliers" element={<SuppliersPage />} />
                       <Route path="ledger" element={<StockLedgerPage />} />
+                      <Route path="expiring-batches" element={<ExpiringBatchesPage />} />
                       <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
                     </Routes>
                   </Suspense>

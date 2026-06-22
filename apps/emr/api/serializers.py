@@ -151,6 +151,45 @@ class ObsSerializer(serializers.ModelSerializer):
         read_only_fields = ["uuid", "voided", "display_value"]
 
 
+class AllergyReactionSerializer(serializers.ModelSerializer):
+    reaction_name = serializers.CharField(source="reaction.name", read_only=True)
+
+    class Meta:
+        model = m.AllergyReaction
+        fields = ["id", "reaction", "reaction_name", "reaction_non_coded"]
+
+
+class AllergySerializer(serializers.ModelSerializer):
+    allergen_name = serializers.CharField(source="allergen.name", read_only=True)
+    reactions = AllergyReactionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = m.Allergy
+        fields = ["id", "uuid", "patient", "allergen", "allergen_name", "category",
+                  "severity", "reaction", "comment", "reactions", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class ConditionSerializer(serializers.ModelSerializer):
+    concept_name = serializers.CharField(source="concept.name", read_only=True)
+
+    class Meta:
+        model = m.Condition
+        fields = ["id", "uuid", "patient", "concept", "concept_name", "clinical_status",
+                  "onset_date", "end_date", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class DiagnosisSerializer(serializers.ModelSerializer):
+    diagnosis_concept_name = serializers.CharField(source="diagnosis_concept.name", read_only=True)
+
+    class Meta:
+        model = m.Diagnosis
+        fields = ["id", "uuid", "patient", "encounter", "diagnosis_concept",
+                  "diagnosis_concept_name", "certainty", "rank", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = m.Order

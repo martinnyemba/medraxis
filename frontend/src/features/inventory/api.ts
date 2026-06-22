@@ -147,8 +147,8 @@ export const inventoryApi = {
 
   // Stock ------------------------------------------------------------------
   listBatches: (params?: ListParams) => api.get<Paginated<StockBatch>>("/inventory/batches/", params),
-  expiringBatches: (days: number) =>
-    api.get<Paginated<StockBatch>>("/inventory/batches/expiring/", { days }),
+  expiringBatches: (params?: ListParams) =>
+    api.get<Paginated<StockBatch>>("/inventory/batches/expiring/", params),
   listTransactions: (params?: ListParams) =>
     api.get<Paginated<StockTransaction>>("/inventory/transactions/", params),
 

@@ -1,9 +1,9 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, CreditCard, Receipt } from "lucide-react";
+import { ArrowLeft, CheckCircle2, CreditCard, Receipt, RotateCcw } from "lucide-react";
 import { posApi } from "./api";
-import type { PaymentMethod } from "./types";
+import type { PaymentMethod, Sale, SalesReturnLine } from "./types";
 import { ApiError } from "@/lib/api/types";
 import { openAuthenticatedFile } from "@/lib/api/client";
 import { money, formatDateTime } from "@/lib/format";
@@ -112,6 +112,7 @@ export function SaleDetailPage() {
                 </Button>
               )}
               {canPay && <PaymentDialog saleId={sale.id} balanceDue={sale.balance_due} onPaid={invalidate} />}
+              {!isDraft && <CreateReturnDialog sale={sale} onCreated={invalidate} />}
             </div>
           }
         />
@@ -311,6 +312,168 @@ function PaymentDialog({
           <DialogFooter>
             <Button type="submit" disabled={pay.isPending}>
               {pay.isPending ? <Spinner className="size-4" /> : "Record payment"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ReturnLineState {
+  checked: boolean;
+  quantity: string;
+}
+
+function CreateReturnDialog({ sale, onCreated }: { sale: Sale; onCreated: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [reason, setReason] = React.useState("");
+  const [restock, setRestock] = React.useState(true);
+  const [returnDate, setReturnDate] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const [lineState, setLineState] = React.useState<ReturnLineState[]>([]);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    if (open) {
+      setReason("");
+      setRestock(true);
+      setReturnDate(new Date().toISOString().slice(0, 10));
+      setLineState(sale.lines.map(() => ({ checked: false, quantity: "" })));
+      setFormError(null);
+    }
+  }, [open, sale.lines]);
+
+  const create = useMutation({
+    mutationFn: (lines: SalesReturnLine[]) =>
+      posApi.createSalesReturn({
+        sale: sale.id,
+        location: sale.location,
+        return_date: returnDate,
+        reason,
+        restock,
+        lines,
+      }),
+    onSuccess: () => {
+      toast({ title: "Return created", variant: "success" });
+      setOpen(false);
+      onCreated();
+    },
+    onError: (err) =>
+      setFormError(err instanceof ApiError ? err.toUserMessage() : "Could not create return."),
+  });
+
+  function toggleLine(idx: number, checked: boolean) {
+    setLineState((prev) =>
+      prev.map((s, i) =>
+        i === idx ? { ...s, checked, quantity: checked ? s.quantity || String(sale.lines[i].quantity) : s.quantity } : s,
+      ),
+    );
+  }
+
+  function setQuantity(idx: number, quantity: string) {
+    setLineState((prev) => prev.map((s, i) => (i === idx ? { ...s, quantity } : s)));
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    const lines: SalesReturnLine[] = [];
+    for (let i = 0; i < sale.lines.length; i++) {
+      const state = lineState[i];
+      if (!state?.checked) continue;
+      const line = sale.lines[i];
+      const qty = Number(state.quantity);
+      if (!qty || qty <= 0 || qty > Number(line.quantity)) {
+        setFormError(`Enter a valid quantity for "${line.description}" (max ${line.quantity}).`);
+        return;
+      }
+      lines.push({
+        product: line.product ?? null,
+        description: line.description,
+        quantity: state.quantity,
+        unit_price: line.unit_price ?? "0",
+      });
+    }
+    if (lines.length === 0) return setFormError("Select at least one item to return.");
+    create.mutate(lines);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <RotateCcw className="size-4" /> Create return
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Create return</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Items to return</Label>
+            <div className="space-y-2 rounded-md border p-3">
+              {sale.lines.map((line, idx) => (
+                <div key={line.id ?? idx} className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-input"
+                    checked={lineState[idx]?.checked ?? false}
+                    onChange={(e) => toggleLine(idx, e.target.checked)}
+                  />
+                  <span className="flex-1 text-sm">{line.description}</span>
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    max={line.quantity}
+                    placeholder={`/ ${line.quantity}`}
+                    className="w-24"
+                    disabled={!lineState[idx]?.checked}
+                    value={lineState[idx]?.quantity ?? ""}
+                    onChange={(e) => setQuantity(idx, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="return-date">Return date</Label>
+            <Input
+              id="return-date"
+              type="date"
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="reason">Reason</Label>
+            <Input
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Why is this being returned?"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-input"
+              checked={restock}
+              onChange={(e) => setRestock(e.target.checked)}
+            />
+            Restock returned items
+          </label>
+          {formError && (
+            <p className="whitespace-pre-line rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button type="submit" disabled={create.isPending}>
+              {create.isPending ? <Spinner className="size-4" /> : "Create return"}
             </Button>
           </DialogFooter>
         </form>

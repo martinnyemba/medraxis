@@ -3,8 +3,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.emr import models as m
 from apps.emr.api.serializers import (
+    AllergySerializer,
     CohortSerializer,
     ConceptSerializer,
+    ConditionSerializer,
+    DiagnosisSerializer,
     DrugSerializer,
     EncounterSerializer,
     EncounterTypeSerializer,
@@ -97,6 +100,27 @@ class ObsViewSet(viewsets.ModelViewSet):
     serializer_class = ObsSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["person", "concept", "encounter", "interpretation", "status"]
+
+
+class AllergyViewSet(viewsets.ModelViewSet):
+    queryset = m.Allergy.objects.select_related("allergen").prefetch_related("reactions")
+    serializer_class = AllergySerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["patient", "category", "severity"]
+
+
+class ConditionViewSet(viewsets.ModelViewSet):
+    queryset = m.Condition.objects.select_related("concept")
+    serializer_class = ConditionSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["patient", "clinical_status"]
+
+
+class DiagnosisViewSet(viewsets.ModelViewSet):
+    queryset = m.Diagnosis.objects.select_related("diagnosis_concept", "encounter")
+    serializer_class = DiagnosisSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["patient", "encounter", "certainty"]
 
 
 class OrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):

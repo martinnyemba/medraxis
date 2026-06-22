@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ShoppingCart, Plus, Users } from "lucide-react";
+import { ShoppingCart, Plus, RotateCcw, Users } from "lucide-react";
 import { posApi } from "./api";
 import { money, formatDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -37,6 +37,11 @@ export function SalesListPage() {
         description="Point-of-sale invoices and their payment status."
         actions={
           <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/pos/returns">
+                <RotateCcw className="size-4" /> Returns
+              </Link>
+            </Button>
             <Button asChild variant="outline">
               <Link to="/pos/customers">
                 <Users className="size-4" /> Customers

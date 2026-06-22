@@ -103,6 +103,58 @@ export interface Concept {
   retired: boolean;
 }
 
+export type AllergyCategory = "DRUG" | "FOOD" | "ENVIRONMENT" | "OTHER";
+export type AllergySeverity = "MILD" | "MODERATE" | "SEVERE";
+
+export interface AllergyReaction {
+  id: number;
+  reaction: number;
+  reaction_name: string;
+  reaction_non_coded: string;
+}
+
+export interface Allergy {
+  id: number;
+  uuid: string;
+  patient: number;
+  allergen: number;
+  allergen_name: string;
+  category: AllergyCategory;
+  severity: AllergySeverity;
+  reaction: string;
+  comment: string;
+  reactions: AllergyReaction[];
+  voided: boolean;
+}
+
+export type ConditionClinicalStatus = "ACTIVE" | "INACTIVE" | "RESOLVED";
+
+export interface Condition {
+  id: number;
+  uuid: string;
+  patient: number;
+  concept: number;
+  concept_name: string;
+  clinical_status: ConditionClinicalStatus;
+  onset_date: string | null;
+  end_date: string | null;
+  voided: boolean;
+}
+
+export type DiagnosisCertainty = "CONFIRMED" | "PROVISIONAL";
+
+export interface Diagnosis {
+  id: number;
+  uuid: string;
+  patient: number;
+  encounter: number | null;
+  diagnosis_concept: number;
+  diagnosis_concept_name: string;
+  certainty: DiagnosisCertainty;
+  rank: number;
+  voided: boolean;
+}
+
 /** Reference metadata (read-only list endpoints). */
 export interface NamedRef {
   id: number;

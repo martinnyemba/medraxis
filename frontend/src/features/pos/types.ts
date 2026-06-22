@@ -86,3 +86,37 @@ export interface SaleCreateInput {
   note?: string;
   lines: SaleLine[];
 }
+
+export type SalesReturnStatus = "DRAFT" | "COMPLETED" | "CANCELLED";
+
+export interface SalesReturnLine {
+  id?: number;
+  product: number | null;
+  description: string;
+  quantity: string;
+  unit_price: string;
+  line_total?: string;
+}
+
+export interface SalesReturn {
+  id: number;
+  return_number: string;
+  sale: number;
+  sale_invoice_number: string;
+  location: number | null;
+  return_date: string;
+  reason: string;
+  restock: boolean;
+  total: string;
+  status: SalesReturnStatus;
+  lines: SalesReturnLine[];
+}
+
+export interface SalesReturnCreateInput {
+  sale: number;
+  location?: number | null;
+  return_date: string;
+  reason?: string;
+  restock?: boolean;
+  lines: SalesReturnLine[];
+}

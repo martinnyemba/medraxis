@@ -1,7 +1,10 @@
 import { api } from "@/lib/api/client";
 import type { Paginated } from "@/lib/api/types";
 import type {
+  Allergy,
   Concept,
+  Condition,
+  Diagnosis,
   Encounter,
   NamedRef,
   Obs,
@@ -38,6 +41,18 @@ export const emrApi = {
   // Concepts (for observation entry) --------------------------------------
   listConcepts: (params?: ListParams) => api.get<Paginated<Concept>>("/concepts/", params),
   getConcept: (id: number) => api.get<Concept>(`/concepts/${id}/`),
+
+  // Allergies ----------------------------------------------------------------
+  listAllergies: (params?: ListParams) => api.get<Paginated<Allergy>>("/allergies/", params),
+  createAllergy: (data: Partial<Allergy>) => api.post<Allergy>("/allergies/", data),
+
+  // Conditions -----------------------------------------------------------------
+  listConditions: (params?: ListParams) => api.get<Paginated<Condition>>("/conditions/", params),
+  createCondition: (data: Partial<Condition>) => api.post<Condition>("/conditions/", data),
+
+  // Diagnoses -------------------------------------------------------------------
+  listDiagnoses: (params?: ListParams) => api.get<Paginated<Diagnosis>>("/diagnoses/", params),
+  createDiagnosis: (data: Partial<Diagnosis>) => api.post<Diagnosis>("/diagnoses/", data),
 
   // Reference metadata -----------------------------------------------------
   listVisitTypes: () => api.get<Paginated<NamedRef>>("/visit-types/", { page_size: 200 }),

@@ -17,6 +17,7 @@ import { ErrorState } from "@/components/common/states";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisitsTab } from "./components/VisitsTab";
 import { EncountersTab } from "./components/EncountersTab";
+import { ClinicalTab } from "./components/ClinicalTab";
 
 export function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -87,12 +88,16 @@ export function PatientDetailPage() {
         <TabsList>
           <TabsTrigger value="visits">Visits</TabsTrigger>
           <TabsTrigger value="encounters">Encounters &amp; Observations</TabsTrigger>
+          <TabsTrigger value="clinical">Clinical Records</TabsTrigger>
         </TabsList>
         <TabsContent value="visits">
           <VisitsTab patientId={patient.id} />
         </TabsContent>
         <TabsContent value="encounters">
           <EncountersTab patient={patient} />
+        </TabsContent>
+        <TabsContent value="clinical">
+          <ClinicalTab patient={patient} />
         </TabsContent>
       </Tabs>
     </div>

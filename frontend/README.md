@@ -15,13 +15,14 @@ vertical can later be carved out along an existing seam.
 | Area | State |
 |---|---|
 | App shell, auth (JWT + silent refresh), tenant switcher | ✅ Built |
-| **EMR** — patient registry, registration, visits, encounters, observations | ✅ Built |
+| **EMR** — patient registry, registration, visits, encounters, observations, clinical records (allergies, conditions, diagnoses) | ✅ Built |
 | **LIS** — worklist, ordering, specimen accession/collect/receive, result worksheet (enter → verify → release), test catalog, report/label PDFs | ✅ Built |
-| **POS** — sales list, terminal (product search → cart → location), complete (stock issue), payments, receipt PDF, customers | ✅ Built |
+| **POS** — sales list, terminal (product search → cart → location), complete (stock issue), payments, receipt PDF, customers, sales returns | ✅ Built |
 | **Pharmacy** — prescriptions list, prescribing on the patient timeline, dispensing against a prescription (stock issue) | ✅ Built |
-| **Inventory** — products (create, receive stock), product detail (batches + movements), suppliers, stock ledger, purchase orders | ✅ Built |
+| **Inventory** — products (create, receive stock), product detail (batches + movements), suppliers, stock ledger, expiring batches, purchase orders | ✅ Built |
 | **Billing** — billable service catalogue, insurance schemes & patient policies | ✅ Built |
 | **Finance** — cash/bank accounts (transaction drill-down), expenses, purchase bills, supplier payments, customer/supplier party ledger | ✅ Built |
+| **Notifications** — in-app bell with unread badge, mark-as-read | ✅ Built |
 
 ## Prerequisites
 
@@ -77,18 +78,19 @@ src/
   components/
     ui/             # shadcn/ui primitives (button, dialog, table, select, …)
     common/         # PageHeader, Pagination, Empty/Error states
-    layout/         # AppShell, Sidebar, OrgSwitcher, UserMenu
+    layout/         # AppShell, Sidebar, OrgSwitcher, UserMenu, NotificationBell
   features/
     auth/           # AuthContext, LoginPage, ProtectedRoute
     tenancy/        # TenantContext (facility switcher)
     dashboard/      # landing page
-    emr/            # EMR vertical (patients, visits, encounters, observations)
+    emr/            # EMR vertical (patients, visits, encounters, observations, allergies/conditions/diagnoses)
     lis/            # Laboratory vertical (worklist, ordering, specimens, results)
-    pos/            # Point-of-sale vertical (sales, terminal, payments, customers)
+    pos/            # Point-of-sale vertical (sales, terminal, payments, customers, sales returns)
     pharmacy/       # Pharmacy vertical (prescriptions, dispensing)
-    inventory/      # Inventory vertical (products, stock, suppliers, POs)
+    inventory/      # Inventory vertical (products, stock, suppliers, expiring batches, POs)
     billing/        # Billing vertical (billable services, insurance schemes & policies)
     finance/        # Finance vertical (accounts, expenses, purchase bills, supplier payments, party ledger)
+    notifications/  # In-app notification API/types (bell lives in components/layout)
     placeholder/    # "coming soon" 404 fallback
   App.tsx           # routing (per-vertical code-split lazy routes)
   main.tsx          # providers (QueryClient, Toast)

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, Search, Landmark, ScrollText, Truck } from "lucide-react";
+import { Boxes, Search, Landmark, ScrollText, Truck, CalendarClock } from "lucide-react";
 import { inventoryApi } from "./api";
 import { money } from "@/lib/format";
 import { useDebounce } from "@/lib/hooks";
@@ -68,6 +68,11 @@ export function ProductsListPage() {
             <Button asChild variant="outline">
               <Link to="/inventory/ledger">
                 <Landmark className="size-4" /> Stock ledger
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/inventory/expiring-batches">
+                <CalendarClock className="size-4" /> Expiring batches
               </Link>
             </Button>
             <ReceiveStockDialog variant="outline" />

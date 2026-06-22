@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { UserMenu } from "./UserMenu";
+import { NotificationBell } from "./NotificationBell";
 import { TenantProvider } from "@/features/tenancy/TenantContext";
 
 export function AppShell() {
@@ -16,6 +17,7 @@ export function AppShell() {
             </div>
             <div className="ml-auto flex items-center gap-4">
               <OrgSwitcher />
+              <NotificationBell />
               <UserMenu />
             </div>
           </header>

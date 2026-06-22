@@ -69,3 +69,53 @@ class SaleApiTests(APITestCase):
         sale_id = self._create_sale(location=empty_location.id).data["id"]
         res = self.client.post(f"/api/v1/pos/sales/{sale_id}/complete/", format="json")
         self.assertEqual(res.status_code, 400)
+
+
+class SalesReturnApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="cashier2", password="pw12345")
+        self.client.force_authenticate(self.user)
+
+        self.location = Location.objects.create(name="Counter")
+        category = ProductCategory.objects.create(name="Meds")
+        unit = UnitOfMeasure.objects.create(name="Tablet")
+        self.product = Product.objects.create(
+            name="Amoxicillin", sku="AMOX2", category=category, unit=unit,
+            sale_price=Decimal("2.50"))
+        receive_stock(product=self.product, location=self.location, quantity=100,
+                      batch_number="B1")
+
+        sale_res = self.client.post("/api/v1/pos/sales/", {
+            "location": self.location.id,
+            "lines": [
+                {"line_type": "PRODUCT", "product": self.product.id,
+                 "description": self.product.name, "quantity": "2"}
+            ],
+        }, format="json")
+        self.sale_id = sale_res.data["id"]
+        self.invoice_number = sale_res.data["invoice_number"]
+        self.client.post(f"/api/v1/pos/sales/{self.sale_id}/complete/", format="json")
+        self.product.refresh_from_db()
+
+    def test_create_and_process_sales_return_restocks(self):
+        before = self.product.quantity_on_hand
+
+        res = self.client.post("/api/v1/pos/sales-returns/", {
+            "sale": self.sale_id, "location": self.location.id,
+            "return_date": "2024-01-01", "reason": "Damaged packaging",
+            "lines": [
+                {"product": self.product.id, "description": self.product.name,
+                 "quantity": "1", "unit_price": "2.50"}
+            ],
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data["sale_invoice_number"], self.invoice_number)
+        self.assertEqual(res.data["status"], "DRAFT")
+
+        return_id = res.data["id"]
+        processed = self.client.post(f"/api/v1/pos/sales-returns/{return_id}/process/", format="json")
+        self.assertEqual(processed.status_code, 200, processed.data)
+        self.assertEqual(processed.data["status"], "COMPLETED")
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.quantity_on_hand, before + Decimal("1"))
