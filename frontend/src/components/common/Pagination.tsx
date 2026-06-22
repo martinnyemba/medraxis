@@ -11,7 +11,7 @@ interface PaginationProps {
 export function Pagination({ page, totalPages, count, onPageChange }: PaginationProps) {
   if (count === 0) return null;
   return (
-    <div className="flex items-center justify-between border-t px-1 py-3 text-sm text-muted-foreground">
+    <div className="flex flex-col gap-2 border-t px-1 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
       <span>
         Page {page} of {totalPages} · {count} record{count === 1 ? "" : "s"}
       </span>
