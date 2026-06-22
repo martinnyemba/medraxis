@@ -136,7 +136,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
 | **Lint** | `ruff check` (pyflakes, import sorting, pyupgrade, bugbear, Django rules; config in `pyproject.toml`) |
 | **Tests (SQLite)** | migrations in sync (`makemigrations --check`), `manage.py check`, full test suite |
 | **Tests (PostgreSQL)** | migrate + seed + tests against Postgres 16 (the production DB path) |
-| **Docker build** | builds the production image from the `Dockerfile` |
+| **Docker build** | builds the production image, boots the full compose stack, seeds it, and runs `scripts/smoke_test.py` against the live API |
 
 Lint and lint+tests locally:
 
@@ -174,6 +174,41 @@ cp .env.example .env   # edit DJANGO_SECRET_KEY; uncomment the compose
                         # DATABASE_URL/REDIS_URL/CELERY_* lines
 docker compose up -d
 docker compose run --rm web python manage.py seed --demo
+```
+
+### Smoke testing
+
+`scripts/smoke_test.py` is a stdlib-only script that checks a *running*
+instance: it hits `/api/docs/`, authenticates via JWT, then calls a handful
+of authenticated endpoints (`/api/v1/users/me/`, `/api/v1/concepts/`,
+`/api/v1/providers/`, `/api/v1/lab/tests/`, `/api/v1/inventory/products/`).
+It exits non-zero if anything fails, and runs automatically in CI's
+**Docker build** job against the compose stack. To run it locally:
+
+```bash
+docker compose up -d
+echo "DJANGO_SEED_ADMIN_PASSWORD=changeme" >> .env
+docker compose restart web
+docker compose exec -T web python manage.py seed
+
+SMOKE_TEST_BASE_URL=http://localhost:8000 \
+SMOKE_TEST_PASSWORD=changeme \
+python scripts/smoke_test.py
+```
+
+### Load testing
+
+`loadtests/locustfile.py` is a [Locust](https://locust.io/) load test that
+authenticates once via JWT, then issues weighted, **read-only** requests
+against the same endpoints the smoke test covers — safe to run repeatedly
+against a shared environment. Not run in CI (to avoid flakiness/cost on
+every push); run it manually against a local or staging stack:
+
+```bash
+pip install -r requirements-dev.txt
+LOAD_TEST_PASSWORD=changeme \
+locust -f loadtests/locustfile.py --host=http://localhost:8000
+# or headless: --headless -u 20 -r 5 -t 1m
 ```
 
 ## Tech stack
