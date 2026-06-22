@@ -30,14 +30,37 @@ PRIVILEGES = [
     "View Patients", "Add Patients", "Edit Patients",
     "View Concepts", "Manage Concepts",
     "View Observations", "Add Observations",
+    "View Visits", "Manage Visits",
+    "View Encounters", "Manage Encounters",
+    "View Clinical Records", "Manage Clinical Records",
+    "View Orders", "Manage Orders",
+    "View Drug Catalog", "Manage Drug Catalog",
+    "View Relationships", "Manage Relationships",
+    "View Cohorts", "Manage Cohorts",
+    "View Forms", "Manage Forms",
+    "View Programs", "Manage Program Enrolment",
     "Manage Lab Results", "Manage Inventory", "Run POS",
 ]
 
 ROLES = {
-    "Clinician": ["View Patients", "Add Patients", "Edit Patients", "View Concepts",
-                  "View Observations", "Add Observations"],
-    "Lab Technologist": ["View Patients", "View Concepts", "Manage Lab Results"],
-    "Pharmacist": ["View Patients", "Manage Inventory", "Run POS"],
+    "Clinician": [
+        "View Patients", "Add Patients", "Edit Patients", "View Concepts",
+        "View Observations", "Add Observations",
+        "View Visits", "Manage Visits", "View Encounters", "Manage Encounters",
+        "View Clinical Records", "Manage Clinical Records",
+        "View Orders", "Manage Orders",
+        "View Relationships", "Manage Relationships",
+        "View Cohorts", "View Forms",
+        "View Programs", "Manage Program Enrolment",
+    ],
+    "Lab Technologist": [
+        "View Patients", "View Concepts", "Manage Lab Results",
+        "View Visits", "View Encounters", "View Clinical Records", "View Orders",
+    ],
+    "Pharmacist": [
+        "View Patients", "Manage Inventory", "Run POS",
+        "View Drug Catalog", "Manage Drug Catalog", "View Orders",
+    ],
     "Cashier": ["Run POS"],
     "System Administrator": PRIVILEGES,
 }

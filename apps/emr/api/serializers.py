@@ -22,8 +22,15 @@ class ConceptSerializer(serializers.ModelSerializer):
 class PersonNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = m.PersonName
-        fields = ["id", "preferred", "prefix", "given_name", "middle_name",
+        fields = ["id", "person", "preferred", "prefix", "given_name", "middle_name",
                   "family_name", "family_name_suffix"]
+
+
+class PatientIdentifierTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.PatientIdentifierType
+        fields = ["id", "uuid", "name", "description", "required", "uniqueness_behavior", "retired"]
+        read_only_fields = fields
 
 
 class PatientIdentifierSerializer(serializers.ModelSerializer):
@@ -33,7 +40,7 @@ class PatientIdentifierSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = m.PatientIdentifier
-        fields = ["id", "identifier_type", "identifier_type_name", "identifier",
+        fields = ["id", "patient", "identifier_type", "identifier_type_name", "identifier",
                   "location", "preferred"]
         extra_kwargs = {"identifier": {"required": False}}
 
@@ -41,6 +48,7 @@ class PatientIdentifierSerializer(serializers.ModelSerializer):
 class PatientSerializer(serializers.ModelSerializer):
     """Read/write serializer that registers a patient + person + name + id atomically."""
 
+    person_id = serializers.IntegerField(read_only=True)
     gender = serializers.ChoiceField(
         choices=m.Person.Gender.choices, source="person.gender", required=False
     )
@@ -57,7 +65,7 @@ class PatientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = m.Patient
-        fields = ["id", "uuid", "gender", "birthdate", "names", "identifiers",
+        fields = ["id", "uuid", "person_id", "gender", "birthdate", "names", "identifiers",
                   "allergy_status", "voided", "given_name", "family_name", "identifier_type"]
         read_only_fields = ["uuid", "voided"]
 
@@ -101,6 +109,28 @@ class PatientSerializer(serializers.ModelSerializer):
         return instance
 
 
+class VisitTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.VisitType
+        fields = ["id", "uuid", "name", "description", "retired"]
+        read_only_fields = fields
+
+
+class EncounterTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.EncounterType
+        fields = ["id", "uuid", "name", "description", "retired"]
+        read_only_fields = fields
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.Location
+        fields = ["id", "uuid", "name", "description", "parent",
+                  "city_village", "country", "retired"]
+        read_only_fields = fields
+
+
 class VisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = m.Visit
@@ -127,6 +157,45 @@ class ObsSerializer(serializers.ModelSerializer):
                   "value_datetime", "value_boolean", "interpretation", "comments",
                   "status", "display_value", "voided"]
         read_only_fields = ["uuid", "voided", "display_value"]
+
+
+class AllergyReactionSerializer(serializers.ModelSerializer):
+    reaction_name = serializers.CharField(source="reaction.name", read_only=True)
+
+    class Meta:
+        model = m.AllergyReaction
+        fields = ["id", "reaction", "reaction_name", "reaction_non_coded"]
+
+
+class AllergySerializer(serializers.ModelSerializer):
+    allergen_name = serializers.CharField(source="allergen.name", read_only=True)
+    reactions = AllergyReactionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = m.Allergy
+        fields = ["id", "uuid", "patient", "allergen", "allergen_name", "category",
+                  "severity", "reaction", "comment", "reactions", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class ConditionSerializer(serializers.ModelSerializer):
+    concept_name = serializers.CharField(source="concept.name", read_only=True)
+
+    class Meta:
+        model = m.Condition
+        fields = ["id", "uuid", "patient", "concept", "concept_name", "clinical_status",
+                  "onset_date", "end_date", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class DiagnosisSerializer(serializers.ModelSerializer):
+    diagnosis_concept_name = serializers.CharField(source="diagnosis_concept.name", read_only=True)
+
+    class Meta:
+        model = m.Diagnosis
+        fields = ["id", "uuid", "patient", "encounter", "diagnosis_concept",
+                  "diagnosis_concept_name", "certainty", "rank", "voided"]
+        read_only_fields = ["uuid", "voided"]
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -188,3 +257,80 @@ class FormSerializer(serializers.ModelSerializer):
         fields = ["id", "uuid", "name", "version", "build", "published",
                   "encounter_type", "retired"]
         read_only_fields = ["uuid", "retired"]
+
+
+class PersonAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.PersonAddress
+        fields = ["id", "uuid", "person", "preferred", "address1", "address2",
+                  "city_village", "county_district", "state_province", "country",
+                  "postal_code", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class PersonAttributeTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.PersonAttributeType
+        fields = ["id", "uuid", "name", "description", "format", "searchable",
+                  "sort_weight", "retired"]
+        read_only_fields = fields
+
+
+class PersonAttributeSerializer(serializers.ModelSerializer):
+    attribute_type_name = serializers.CharField(source="attribute_type.name", read_only=True)
+
+    class Meta:
+        model = m.PersonAttribute
+        fields = ["id", "uuid", "person", "attribute_type", "attribute_type_name",
+                  "value", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class ProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.Program
+        fields = ["id", "uuid", "name", "description", "concept", "retired"]
+        read_only_fields = fields
+
+
+class ProgramWorkflowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.ProgramWorkflow
+        fields = ["id", "uuid", "name", "description", "program", "retired"]
+        read_only_fields = fields
+
+
+class ProgramWorkflowStateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.ProgramWorkflowState
+        fields = ["id", "uuid", "name", "description", "workflow",
+                  "initial", "terminal", "retired"]
+        read_only_fields = fields
+
+
+class PatientStateSerializer(serializers.ModelSerializer):
+    state_name = serializers.CharField(source="state.name", read_only=True)
+
+    class Meta:
+        model = m.PatientState
+        fields = ["id", "uuid", "patient_program", "state", "state_name",
+                  "start_date", "end_date", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class PatientProgramSerializer(serializers.ModelSerializer):
+    program_name = serializers.CharField(source="program.name", read_only=True)
+    states = PatientStateSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = m.PatientProgram
+        fields = ["id", "uuid", "patient", "program", "program_name", "location",
+                  "date_enrolled", "date_completed", "states", "voided"]
+        read_only_fields = ["uuid", "voided"]
+
+
+class CohortMembershipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.CohortMembership
+        fields = ["id", "uuid", "cohort", "patient", "start_date", "end_date", "voided"]
+        read_only_fields = ["uuid", "voided"]

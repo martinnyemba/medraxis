@@ -18,7 +18,14 @@ class InsuranceSchemeSerializer(serializers.ModelSerializer):
 
 
 class PatientInsuranceSerializer(serializers.ModelSerializer):
+    patient_name = serializers.SerializerMethodField()
+    scheme_name = serializers.ReadOnlyField(source="scheme.name")
+
     class Meta:
         model = m.PatientInsurance
-        fields = ["id", "patient", "scheme", "policy_number", "valid_from",
-                  "valid_to", "is_active"]
+        fields = ["id", "patient", "patient_name", "scheme", "scheme_name", "policy_number",
+                  "valid_from", "valid_to", "is_active"]
+
+    def get_patient_name(self, obj):
+        name = obj.patient.person.preferred_name
+        return str(name) if name else ""

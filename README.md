@@ -237,13 +237,47 @@ Built on top of the core domains (see [`docs/platform_features.md`](docs/platfor
 - **Multi-tenant facility scoping**: row-level isolation by `Organization`,
   fail-closed on unauthorized `X-Organization` headers.
 
+## Front-end
+
+A **React + TypeScript SPA** (Vite, Tailwind + shadcn/ui, TanStack Query) lives
+in [`frontend/`](frontend/) and consumes this API over JWT. It implements the
+app shell (auth with silent token refresh, facility/tenant switcher,
+privilege-gated UI) and three full verticals:
+
+- **EMR** — patient registry & registration, visits, encounters and observation
+  entry against the concept dictionary.
+- **LIS** — lab worklist, ordering, specimen accession/collect/receive, and the
+  result worksheet through enter → verify → release (posting to the chart), plus
+  test catalog and report/label PDFs.
+- **POS** — sales terminal (product search → cart → location), completion with
+  stock issue, payments, receipt PDFs and customers.
+- **Pharmacy** — prescribing on the patient timeline and dispensing against a
+  prescription, issuing stock through the shared ledger.
+- **Inventory** — products (create, receive stock into batches), product detail
+  (batches + stock movements), suppliers, the append-only stock ledger and
+  purchase orders.
+- **Billing** — billable service catalogue and insurance (schemes & patient
+  policies).
+- **Finance** — cash/bank accounts with transaction drill-down, expenses,
+  purchase bills, supplier payments and the customer/supplier party ledger.
+
+All seven verticals are fully built and code-split per route.
+See [`frontend/README.md`](frontend/README.md). The SPA's route/feature
+boundaries are aligned to the backend verticals per
+[`docs/packaging_architecture.md`](docs/packaging_architecture.md) §3.3.
+
+```bash
+cd frontend && npm install && npm run dev   # http://localhost:5173 (proxies to :8000)
+```
+
 ## Status
 
 Implemented across eleven apps: full data model, migrations, REST API, the
 integrative clinical/lab/pharmacy/POS workflows, the platform capabilities
-above, seed data, **31 passing tests**, and documentation. A front-end and
-write-side FHIR remain on the roadmap — neither requires reworking the data
-model.
+above, seed data, **125 passing tests**, and documentation — plus a React SPA
+front-end covering all seven verticals (EMR, LIS, POS, Pharmacy, Inventory,
+Billing, Finance) above. Write-side FHIR remains on the roadmap; it does not
+require reworking the data model.
 
 ## License & attribution
 

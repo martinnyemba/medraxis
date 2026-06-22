@@ -35,10 +35,29 @@ class SaleViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     search_fields = ["invoice_number"]
 
     def perform_create(self, serializer):
-        serializer.save(
-            invoice_number=services.next_invoice_number(),
-            cashier=self.request.user if self.request.user.is_authenticated else None,
-        )
+        extra = {
+            "invoice_number": services.next_invoice_number(),
+            "cashier": self.request.user if self.request.user.is_authenticated else None,
+        }
+        if not serializer.validated_data.get("location"):
+            extra["location"] = self._default_location()
+        serializer.save(**extra)
+
+    def _default_location(self):
+        """The active facility's location, used when a sale omits one.
+
+        Prefers a location scoped to the active tenant, falling back to any
+        location (reference locations seeded before tenancy have no org).
+        """
+        from apps.emr.models import Location
+
+        base = Location.objects.filter(retired=False)
+        org = getattr(self.request, "organization", None)
+        if org is not None:
+            scoped = base.filter(organization=org).first()
+            if scoped is not None:
+                return scoped
+        return base.first()
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):

@@ -16,14 +16,25 @@ from apps.lis.api.serializers import (
     LabSectionSerializer,
     LabTestSerializer,
     SpecimenSerializer,
+    SpecimenTypeSerializer,
     TestOrderSerializer,
 )
 from apps.tenancy.mixins import TenantScopedQuerySetMixin
+from django.utils import timezone
 
 
 class LabSectionViewSet(viewsets.ModelViewSet):
     queryset = m.LabSection.objects.all()
     serializer_class = LabSectionSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+
+
+class SpecimenTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """Reference list of specimen types for accessioning forms."""
+
+    queryset = m.SpecimenType.objects.filter(retired=False).order_by("name")
+    serializer_class = SpecimenTypeSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name"]
 
@@ -43,7 +54,40 @@ class TestOrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     filterset_fields = ["patient", "lab_test", "fulfiller_status"]
 
     def perform_create(self, serializer):
-        serializer.save(order_number=next_order_number())
+        """Create a lab order, deriving the EMR Order plumbing from the test.
+
+        A client only needs to supply ``patient`` and ``lab_test``; the order
+        type ("Test Order"), the ordered ``concept`` (the test's concept), the
+        activation time and the ordering provider are filled in here.
+        """
+        from apps.emr.models import OrderType
+
+        lab_test = serializer.validated_data["lab_test"]
+        extra = {"order_number": next_order_number()}
+        if not serializer.validated_data.get("order_type"):
+            extra["order_type"] = OrderType.objects.filter(name="Test Order").first()
+        if not serializer.validated_data.get("concept"):
+            extra["concept"] = lab_test.concept
+        if not serializer.validated_data.get("date_activated"):
+            extra["date_activated"] = timezone.now()
+        if not serializer.validated_data.get("orderer"):
+            provider = getattr(self.request.user, "provider", None)
+            if provider is not None:
+                extra["orderer"] = provider
+        if not serializer.validated_data.get("specimen_source"):
+            extra["specimen_source"] = lab_test.specimen_type
+        serializer.save(**extra)
+
+    @action(detail=True, methods=["post"])
+    def worksheet(self, request, pk=None):
+        """Generate the per-analyte result shells this order needs for entry.
+
+        Idempotent: returns the order's full result set (creating any missing
+        analyte rows), so the technologist always has a complete worksheet.
+        """
+        test_order = self.get_object()
+        results = services.build_worksheet(test_order)
+        return Response(LabResultSerializer(results, many=True).data)
 
     @action(detail=True, methods=["get"])
     def report(self, request, pk=None):
@@ -66,7 +110,50 @@ class SpecimenViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     filterset_fields = ["patient", "status", "specimen_type"]
 
     def perform_create(self, serializer):
-        serializer.save(accession_number=services.next_accession_number())
+        """Accession a specimen, deriving its type from the linked order's test.
+
+        A client supplies the ``patient`` and the ``orders`` being collected for;
+        the specimen type is taken from the first order's test when not given.
+        """
+        extra = {"accession_number": services.next_accession_number()}
+        if not serializer.validated_data.get("specimen_type"):
+            orders = serializer.validated_data.get("orders") or []
+            for order in orders:
+                stype = order.lab_test.specimen_type
+                if stype is not None:
+                    extra["specimen_type"] = stype
+                    break
+        serializer.save(**extra)
+
+    @action(detail=True, methods=["post"])
+    def collect(self, request, pk=None):
+        """Mark the specimen as collected, stamping the collection time."""
+        specimen = self.get_object()
+        specimen.status = m.Specimen.Status.COLLECTED
+        specimen.collected_at = specimen.collected_at or timezone.now()
+        provider = getattr(request.user, "provider", None)
+        if provider and specimen.collected_by_id is None:
+            specimen.collected_by = provider
+        specimen.save(update_fields=["status", "collected_at", "collected_by", "changed_at"])
+        return Response(self.get_serializer(specimen).data)
+
+    @action(detail=True, methods=["post"])
+    def receive(self, request, pk=None):
+        """Mark the specimen as received in the lab, stamping the receipt time."""
+        specimen = self.get_object()
+        specimen.status = m.Specimen.Status.RECEIVED
+        specimen.received_at = specimen.received_at or timezone.now()
+        specimen.save(update_fields=["status", "received_at", "changed_at"])
+        return Response(self.get_serializer(specimen).data)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        """Reject the specimen with a reason (e.g. haemolysed, insufficient)."""
+        specimen = self.get_object()
+        specimen.status = m.Specimen.Status.REJECTED
+        specimen.rejection_reason = request.data.get("rejection_reason", "")
+        specimen.save(update_fields=["status", "rejection_reason", "changed_at"])
+        return Response(self.get_serializer(specimen).data)
 
     @action(detail=True, methods=["get"])
     def label(self, request, pk=None):

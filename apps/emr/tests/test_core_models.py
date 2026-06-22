@@ -21,7 +21,7 @@ from apps.emr.models import (
     VisitAttributeType,
     VisitType,
 )
-from apps.users.models import User
+from apps.users.models import Privilege, Role, User
 
 
 class RelationshipTests(TestCase):
@@ -99,6 +99,14 @@ class CohortTests(TestCase):
 class NewModelApiTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user("u", "u@x.io", "pw-strong-123")
+        role = Role.objects.create(name="Viewer")
+        role.privileges.set([
+            Privilege.objects.create(name="View Drug Catalog"),
+            Privilege.objects.create(name="View Relationships"),
+            Privilege.objects.create(name="View Cohorts"),
+            Privilege.objects.create(name="View Forms"),
+        ])
+        self.user.roles.add(role)
 
     def test_drug_and_relationship_endpoints_exist(self):
         self.client.force_authenticate(self.user)

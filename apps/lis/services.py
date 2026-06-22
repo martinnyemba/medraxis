@@ -17,6 +17,44 @@ def next_accession_number():
     return f"ACC-{today}-{count_today + 1:05d}"
 
 
+def analytes_for_test(lab_test):
+    """The analyte concepts a test reports.
+
+    A panel reports each configured component analyte; a single test reports its
+    own semantic concept. This is the canonical list a result worksheet is built
+    from.
+    """
+    analytes = list(lab_test.analytes.all())
+    if analytes:
+        return analytes
+    return [lab_test.concept]
+
+
+@transaction.atomic
+def build_worksheet(test_order):
+    """Create the PENDING :class:`LabResult` shells an order needs for entry.
+
+    One result per analyte of the ordered test (the components of a panel, or
+    the single test concept otherwise). Idempotent: analytes that already have a
+    result row are left untouched, so it is safe to call repeatedly. Returns the
+    order's full set of results.
+    """
+    existing = set(test_order.results.values_list("analyte_id", flat=True))
+    # Link the order's specimen if one has been accessioned (optional).
+    specimen = test_order.specimens.first() if hasattr(test_order, "specimens") else None
+    for analyte in analytes_for_test(test_order.lab_test):
+        if analyte.id in existing:
+            continue
+        LabResult.objects.create(
+            test_order=test_order,
+            analyte=analyte,
+            specimen=specimen,
+            units=getattr(analyte, "units", "") or "",
+            status=LabResult.Status.PENDING,
+        )
+    return test_order.results.select_related("analyte").all()
+
+
 def _flag_from_limits(value, low_normal, hi_normal, low_critical, hi_critical):
     if low_critical is not None and value <= low_critical:
         return LabResult.Flag.CRITICAL_LOW

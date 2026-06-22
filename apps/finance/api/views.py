@@ -113,7 +113,6 @@ class PartyLedgerViewSet(viewsets.ViewSet):
     _PARTY_MODELS = {
         "customer": ("pos", "customer"),
         "supplier": ("inventory", "supplier"),
-        "client": ("lis", "client"),
     }
 
     def _resolve_party(self, party_type, party_id):

@@ -28,12 +28,17 @@ class ExpenseCategorySerializer(serializers.ModelSerializer):
 
 class ExpenseSerializer(serializers.ModelSerializer):
     total = serializers.ReadOnlyField()
+    category_name = serializers.ReadOnlyField(source="category.name")
+    account_name = serializers.ReadOnlyField(source="account.name", default="")
+    supplier_name = serializers.ReadOnlyField(source="supplier.name", default="")
 
     class Meta:
         model = m.Expense
-        fields = ["id", "number", "category", "account", "supplier", "amount",
-                  "tax_amount", "total", "expense_date", "payment_method", "note"]
+        fields = ["id", "number", "category", "category_name", "account", "account_name",
+                  "supplier", "supplier_name", "amount", "tax_amount", "total",
+                  "expense_date", "payment_method", "note"]
         read_only_fields = ["number", "total"]
+        extra_kwargs = {"expense_date": {"required": False}}
 
 
 class SupplierPaymentAllocationSerializer(serializers.ModelSerializer):
@@ -44,12 +49,15 @@ class SupplierPaymentAllocationSerializer(serializers.ModelSerializer):
 
 class SupplierPaymentSerializer(serializers.ModelSerializer):
     allocations = SupplierPaymentAllocationSerializer(many=True, required=False)
+    supplier_name = serializers.ReadOnlyField(source="supplier.name")
+    account_name = serializers.ReadOnlyField(source="account.name", default="")
 
     class Meta:
         model = m.SupplierPayment
-        fields = ["id", "number", "supplier", "account", "amount", "paid_on",
-                  "method", "reference", "note", "allocations"]
+        fields = ["id", "number", "supplier", "supplier_name", "account", "account_name",
+                  "amount", "paid_on", "method", "reference", "note", "allocations"]
         read_only_fields = ["number"]
+        extra_kwargs = {"paid_on": {"required": False}}
 
 
 class PartyLedgerEntrySerializer(serializers.ModelSerializer):

@@ -4,6 +4,7 @@ from apps.lis.api.views import (
     LabResultViewSet,
     LabSectionViewSet,
     LabTestViewSet,
+    SpecimenTypeViewSet,
     SpecimenViewSet,
     TestOrderViewSet,
 )
@@ -11,6 +12,7 @@ from apps.lis.api.views import (
 
 def register_routes(router):
     router.register("lab/sections", LabSectionViewSet, basename="lab-section")
+    router.register("lab/specimen-types", SpecimenTypeViewSet, basename="specimen-type")
     router.register("lab/tests", LabTestViewSet, basename="lab-test")
     router.register("lab/test-orders", TestOrderViewSet, basename="test-order")
     router.register("lab/specimens", SpecimenViewSet, basename="specimen")

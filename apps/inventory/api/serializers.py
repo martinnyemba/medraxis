@@ -4,6 +4,13 @@ from apps.emr.models import Location
 from apps.inventory import models as m
 
 
+class UnitOfMeasureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.UnitOfMeasure
+        fields = ["id", "uuid", "name", "description", "retired"]
+        read_only_fields = ["uuid", "retired"]
+
+
 class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = m.ProductCategory
@@ -100,11 +107,14 @@ class PurchaseBillItemSerializer(serializers.ModelSerializer):
 class PurchaseBillSerializer(serializers.ModelSerializer):
     items = PurchaseBillItemSerializer(many=True)
     balance_due = serializers.ReadOnlyField()
+    supplier_name = serializers.ReadOnlyField(source="supplier.name")
+    location_name = serializers.ReadOnlyField(source="location.name", default="")
 
     class Meta:
         model = m.PurchaseBill
-        fields = ["id", "bill_number", "supplier", "purchase_order", "location",
-                  "bill_date", "supplier_invoice_no", "subtotal", "tax_total",
+        fields = ["id", "bill_number", "supplier", "supplier_name", "purchase_order", "location",
+                  "location_name", "bill_date", "supplier_invoice_no", "subtotal", "tax_total",
                   "grand_total", "amount_paid", "balance_due", "status", "note", "items"]
         read_only_fields = ["bill_number", "subtotal", "tax_total", "grand_total",
                             "amount_paid", "balance_due", "status"]
+        extra_kwargs = {"bill_date": {"required": False}}
