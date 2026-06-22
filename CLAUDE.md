@@ -69,6 +69,23 @@ Use these technologies and tools unless the project explicitly says otherwise.
 - Celery for background tasks
 - RabbitMQ or Redis as a broker, depending on project requirements
 - Redis for caching and fast temporary data storage
+- `django-celery-beat` for database-backed periodic task schedules
+- System Cron, `django-cron`, or `django-crontab` for simple scheduled jobs that do not need a broker
+- Supervisord or Systemd to keep Celery workers/beat alive as managed services
+
+### Containerization and Orchestration
+
+- Docker for building and running application images
+- Docker Compose for local/dev multi-service stacks (web, worker, beat, db, cache)
+- Kubernetes for production orchestration where the project requires it (Pods, Services, Deployments, ConfigMaps, Secrets, Horizontal Pod Autoscaler)
+- `kubectl` for cluster interaction
+
+### CI/CD and Monitoring
+
+- GitHub Actions, Jenkins, or Travis CI for pipelines, depending on project requirements
+- Separate, explicit configuration per environment: development, staging, production
+- Prometheus and Grafana for metrics and dashboards where observability is required
+- Alerting to Slack, email, or PagerDuty for failed deploys or health-check failures
 
 ### File and Media Storage
 
@@ -338,6 +355,7 @@ API requirements:
 Optional:
 
 - Use GraphQL only when complex client-driven data fetching justifies it.
+- When GraphQL is used: `graphene-django` for the schema layer, `django-filter` for filterable GraphQL connections, GraphiQL for interactive exploration during development, and a batching/optimizer tool such as `graphene-django-optimizer` to avoid N+1 resolver queries.
 
 ---
 
@@ -547,6 +565,8 @@ Index types to consider:
 - Composite index
 - Partial index where supported
 - Full-text index where supported
+- Clustered index (row data physically ordered by the index, typically the primary key)
+- Non-clustered index (a separate structure pointing back to row data, used for secondary lookups)
 
 Optimization requirements:
 
@@ -558,6 +578,7 @@ Optimization requirements:
 - Add pagination.
 - Consider partitioning very large tables, especially date-heavy tables such as bookings, logs, transactions, and audit events.
 - Avoid over-indexing because it slows writes.
+- Use a database performance monitoring tool (e.g. New Relic, SolarWinds Database Performance Analyzer, or the hosting provider's equivalent) to track slow queries in production over time.
 
 ---
 
@@ -567,7 +588,7 @@ Use caching to reduce repeated expensive work.
 
 Supported strategies:
 
-- Redis cache
+- Redis cache, typically via `django-redis` as the Django cache backend
 - Per-view caching
 - Template fragment caching
 - Low-level cache API
@@ -581,6 +602,7 @@ Rules:
 - Invalidate cache when source data changes.
 - Use versioned cache keys for schema or logic changes.
 - Document cache behavior.
+- Monitor cache hit/miss rates in production to confirm caching is actually paying off.
 
 Examples:
 
@@ -662,7 +684,7 @@ Good async use cases:
 
 - Concurrent external API calls
 - WebSocket handling
-- Async database libraries in non-Django contexts
+- Async database libraries in non-Django contexts (e.g. `aiosqlite`, async drivers for Postgres)
 - Background service orchestration
 
 Rules:
@@ -752,6 +774,16 @@ Never:
 - Hardcode credentials
 - Allow unrestricted file uploads
 - Disable security middleware without justification
+
+### IP Tracking and Security Analytics
+
+When request-level tracking is required for abuse prevention or analytics:
+
+- Use `django-ipware` to reliably resolve client IP behind proxies/load balancers.
+- Use `django-ratelimit` (or DRF throttling) to rate-limit by IP, user, or endpoint.
+- Use GeoIP2 (MaxMind) or an API such as ipinfo.io for geolocation when needed.
+- Use anomaly detection (e.g. `scikit-learn`) only when there is a real volume of traffic data to justify it; do not over-engineer this for low-traffic projects.
+- Treat IP addresses and derived location data as personal data: document retention periods and comply with GDPR/CCPA where applicable.
 
 ---
 
@@ -853,6 +885,14 @@ Rules:
 - Update documentation with feature changes.
 - Add tests before marking a task complete.
 
+Branching model:
+
+- Use a GitFlow-style model where the project warrants it: `main` (production), `develop` (integration), `feature/*`, `release/*`, `hotfix/*`. For smaller projects, a simpler trunk-based flow with short-lived feature branches is acceptable.
+- Prefer `rebase` to keep feature-branch history linear before merging; prefer `merge` (not rebase) for shared/long-lived branches to avoid rewriting history others depend on.
+- Use `git stash` to set aside unfinished work without committing it.
+- Use `git cherry-pick` to apply a specific commit onto another branch (e.g. a hotfix onto `main` and `develop`).
+- Use Git hooks (`pre-commit`, `pre-push`, `post-receive`) to enforce linting, formatting, or tests before code lands.
+
 Recommended `.gitignore` includes:
 
 ```text
@@ -888,6 +928,10 @@ Required shell knowledge:
 - Command substitution using `$()`
 - Quoting rules for single and double quotes
 - Basic Bash scripts
+- Text-processing tools: `grep`, `awk`, `sed`
+- `curl` for HTTP requests/debugging and `jq` for parsing JSON output
+- Job control: `jobs`, `fg`, `bg`, and `kill` for managing background processes
+- `trap` for handling signals and cleaning up on script errors/exit
 
 Rules:
 
@@ -898,7 +942,88 @@ Rules:
 
 ---
 
-## 24. Feature Design Template
+## 24. Containerization and Orchestration Skill
+
+Use containers to make environments reproducible across dev, CI, and production.
+
+Docker:
+
+- Write a `Dockerfile` per deployable component (e.g. the Django app image); reuse it across `web`, `worker`, and `beat` by overriding the command.
+- Use multi-stage builds to keep production images small.
+- Use a `.dockerignore` to exclude `.git`, `__pycache__`, local env files, and test artifacts.
+- Run the container process as a non-root user.
+- Add a `HEALTHCHECK` for long-running services.
+- Tag images deliberately (e.g. by git SHA or semantic version), not only `latest`.
+
+Docker Compose:
+
+- Use `docker-compose.yml` to compose the app with its dependencies (database, cache/broker, background workers) for local development and simple production deployments.
+- Use `depends_on` plus health checks so dependent services wait for the database/broker to be ready.
+- Keep secrets out of the compose file; load them via `.env`/`env_file`.
+
+Kubernetes (when the project's scale justifies it):
+
+- Pods as the smallest deployable unit; Deployments to manage replica sets and rollouts; Services to expose Pods on a stable address; Ingress for external HTTP routing.
+- ConfigMaps for non-secret configuration; Secrets for credentials, never committed to source control.
+- Horizontal Pod Autoscaler (HPA) to scale replicas based on CPU/memory or custom metrics.
+- Use namespaces to separate environments within a cluster.
+- Set resource `requests`/`limits` on every container.
+- Prefer rolling updates by default; use blue-green or canary deployments when zero-downtime cutover or fast rollback is critical.
+- `kubectl` for day-to-day inspection (`get`, `describe`, `logs`, `exec`, `rollout status`).
+- Pair with Prometheus/Grafana for cluster and application metrics.
+
+---
+
+## 25. CI/CD Skill
+
+Automate build, test, and deployment so quality gates run on every change.
+
+Pipeline stages:
+
+1. Lint and static analysis.
+2. Run the automated test suite (and migration checks for Django projects).
+3. Build the deployable artifact (e.g. Docker image).
+4. Deploy to the target environment.
+5. Run post-deploy smoke checks.
+
+Tooling:
+
+- GitHub Actions, Jenkins, or Travis CI, depending on where the repository is hosted and team familiarity.
+- Keep pipeline configuration in the repository (e.g. `.github/workflows/*.yml`) so it is versioned with the code.
+
+Environment management:
+
+- Maintain clearly separated configuration for development, staging, and production (env vars/secrets per environment, never shared credentials between them).
+- Promote the same built artifact through environments rather than rebuilding per environment, where practical.
+
+Monitoring and alerting:
+
+- Wire pipeline and deployment failures to a visible channel (Slack, email).
+- Use Prometheus/Grafana (or the hosting provider's equivalent) for post-deploy health and performance monitoring.
+- Treat a CI/CD pipeline as incomplete until failures are both caught and surfaced to someone who can act on them.
+
+---
+
+## 26. Task Scheduling Skill
+
+Choose the lightest mechanism that satisfies the scheduling requirement.
+
+Options, roughly in order of increasing capability:
+
+- System Cron calling a Django management command — fine for simple, infrequent, single-server jobs.
+- `django-cron` or `django-crontab` — cron-like scheduling expressed as Django code/management commands.
+- Celery Beat (`app.conf.beat_schedule`) — scheduled tasks that run through the existing Celery worker infrastructure; appropriate once Celery is already in use for background jobs.
+- `django-celery-beat` — database-backed schedules for Celery Beat, editable at runtime (e.g. via Django Admin) instead of requiring a redeploy.
+
+Rules:
+
+- Keep scheduled task bodies idempotent; a missed or doubled run should not corrupt data.
+- Run workers/beat under a process supervisor (Supervisord, Systemd, or the container orchestrator's restart policy) so they recover from crashes.
+- Log every scheduled run's start, completion, and failure.
+
+---
+
+## 27. Feature Design Template
 
 For every new feature, produce this before implementation:
 
@@ -932,7 +1057,7 @@ For every new feature, produce this before implementation:
 
 ---
 
-## 25. Database Design Checklist
+## 28. Database Design Checklist
 
 Before writing models, confirm:
 
@@ -949,7 +1074,7 @@ Before writing models, confirm:
 
 ---
 
-## 26. API Completion Checklist
+## 29. API Completion Checklist
 
 Before marking an API complete, confirm:
 
@@ -966,7 +1091,7 @@ Before marking an API complete, confirm:
 
 ---
 
-## 27. Performance Checklist
+## 30. Performance Checklist
 
 Before marking a feature production-ready, confirm:
 
@@ -981,7 +1106,7 @@ Before marking a feature production-ready, confirm:
 
 ---
 
-## 28. Security Checklist
+## 31. Security Checklist
 
 Before marking a feature complete, confirm:
 
@@ -998,7 +1123,7 @@ Before marking a feature complete, confirm:
 
 ---
 
-## 29. Agent Output Format
+## 32. Agent Output Format
 
 When asked to implement or plan a feature, respond in this order:
 
@@ -1024,7 +1149,7 @@ When modifying code:
 
 ---
 
-## 30. Non-Negotiable Rules
+## 33. Non-Negotiable Rules
 
 The agent must not:
 
