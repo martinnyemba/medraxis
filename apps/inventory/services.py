@@ -10,6 +10,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.models import AuditLog
+from apps.core.services import audit as audit_services
 from apps.inventory.models import StockBatch, StockTransaction
 
 
@@ -33,12 +35,16 @@ def receive_stock(*, product, location, quantity, unit_cost=Decimal("0"),
         batch.cost_price = unit_cost
     batch.save()
 
-    return StockTransaction.objects.create(
+    txn = StockTransaction.objects.create(
         product=product, batch=batch, location=location,
         transaction_type=StockTransaction.TxnType.RECEIPT,
         quantity=quantity, unit_cost=unit_cost,
         reference_type=reference_type, reference_id=str(reference_id), note=note,
     )
+    audit_services.record(
+        AuditLog.Action.CREATE, instance=txn, description=f"stock received: {quantity} {product.sku}"
+    )
+    return txn
 
 
 @transaction.atomic
@@ -79,6 +85,10 @@ def issue_stock(*, product, location, quantity, transaction_type,
             )
         )
         remaining -= take
+    audit_services.record(
+        AuditLog.Action.UPDATE, instance=product,
+        description=f"stock issued: {quantity} {product.sku} ({transaction_type})",
+    )
     return txns
 
 

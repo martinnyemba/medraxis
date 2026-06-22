@@ -146,6 +146,13 @@ ruff check .
 python manage.py test apps
 ```
 
+To catch lint issues before they reach CI, enable the local pre-commit hook
+(mirrors the **Lint** job above):
+
+```bash
+pip install -r requirements-dev.txt && pre-commit install
+```
+
 Run the production image (migrates, then serves via gunicorn):
 
 ```bash

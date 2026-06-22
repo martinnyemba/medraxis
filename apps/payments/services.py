@@ -10,6 +10,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.models import AuditLog
+from apps.core.services import audit as audit_services
 from apps.payments.models import PaymentIntent, WebhookEvent
 from apps.payments.providers import get_provider
 
@@ -40,6 +42,7 @@ def create_intent(*, gateway, amount, currency=None, channel=None, sale=None,
     intent.raw_response = result.raw
     intent.status = PaymentIntent.Status.PROCESSING
     intent.save(update_fields=["provider_reference", "checkout_url", "raw_response", "status"])
+    audit_services.record(AuditLog.Action.CREATE, instance=intent, description="payment intent created")
     return intent
 
 
@@ -72,6 +75,7 @@ def settle_intent(intent: PaymentIntent):
         fields.append("settled_payment")
 
     intent.save(update_fields=fields)
+    audit_services.record(AuditLog.Action.UPDATE, instance=intent, description="payment intent settled")
     return intent
 
 

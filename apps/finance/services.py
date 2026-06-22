@@ -9,6 +9,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.models import AuditLog
+from apps.core.services import audit as audit_services
 from apps.finance.ledger import post_account_transaction, post_party_entry
 from apps.finance.models import (
     AccountTransaction,
@@ -45,6 +47,7 @@ def record_expense(*, category, amount, expense_date=None, account=None, supplie
             occurred_at=timezone.now(), reference_type="EXPENSE", reference_id=expense.number,
             note=note or category.name,
         )
+    audit_services.record(AuditLog.Action.CREATE, instance=expense, description="expense recorded")
     return expense
 
 
@@ -94,6 +97,7 @@ def create_purchase_bill(*, supplier, location, items, bill_date=None, purchase_
         reference_type="PURCHASE_BILL", reference_id=bill.bill_number,
         narration=f"Purchase bill {bill.bill_number}", organization=organization,
     )
+    audit_services.record(AuditLog.Action.CREATE, instance=bill, description="purchase bill created")
     return bill
 
 
@@ -138,4 +142,5 @@ def pay_supplier(*, supplier, amount, account=None, paid_on=None, method="CASH",
         reference_type="SUPPLIER_PAYMENT", reference_id=payment.number,
         narration=f"Payment {payment.number}", organization=organization,
     )
+    audit_services.record(AuditLog.Action.CREATE, instance=payment, description="supplier paid")
     return payment

@@ -3,3 +3,4 @@
 
 ruff>=0.6          # linting / import sorting (config in pyproject.toml)
 coverage>=7.0      # optional: test coverage
+pre-commit>=3.8    # local git hooks mirroring the CI lint gate

@@ -4,6 +4,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.models import AuditLog
+from apps.core.services import audit as audit_services
 from apps.inventory import services as inventory_services
 from apps.inventory.models import StockTransaction
 from apps.pos.models import Payment, Sale, SaleLine
@@ -83,6 +85,7 @@ def complete_sale(sale: Sale):
 
     _sync_payment_status(sale)
     sale.save()
+    audit_services.record(AuditLog.Action.UPDATE, instance=sale, description="sale completed")
     return sale
 
 
@@ -123,6 +126,9 @@ def add_payment(sale: Sale, *, method, amount, reference="", received_by=None, a
             narration=f"Payment for {sale.invoice_number}",
             organization=getattr(sale, "organization", None),
         )
+    audit_services.record(
+        AuditLog.Action.CREATE, instance=payment, actor=received_by, description="sale payment added"
+    )
     return payment
 
 
@@ -178,6 +184,7 @@ def convert_quotation_to_sale(quotation):
     quotation.converted_sale = sale
     quotation.status = Quotation.Status.CONVERTED
     quotation.save(update_fields=["converted_sale", "status", "updated_at"])
+    audit_services.record(AuditLog.Action.CREATE, instance=sale, description="sale created from quotation")
     return sale
 
 
@@ -214,4 +221,7 @@ def process_sales_return(sales_return):
 
     sales_return.status = SalesReturn.Status.COMPLETED
     sales_return.save(update_fields=["total", "status", "updated_at"])
+    audit_services.record(
+        AuditLog.Action.UPDATE, instance=sales_return, description="sales return processed"
+    )
     return sales_return

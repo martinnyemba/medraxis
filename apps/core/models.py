@@ -110,19 +110,25 @@ class BaseOpenmrsData(BaseOpenmrsObject):
 
     def void(self, user=None, reason=""):
         """Soft-delete this record with an audit trail."""
+        from apps.core.services import audit
+
         self.voided = True
         self.voided_at = timezone.now()
         self.voided_by = user
         self.void_reason = reason
         self.save(update_fields=["voided", "voided_at", "voided_by", "void_reason"])
+        audit.record(AuditLog.Action.VOID, instance=self, actor=user, description=reason)
 
     def unvoid(self):
         """Restore a previously voided record."""
+        from apps.core.services import audit
+
         self.voided = False
         self.voided_at = None
         self.voided_by = None
         self.void_reason = ""
         self.save(update_fields=["voided", "voided_at", "voided_by", "void_reason"])
+        audit.record(AuditLog.Action.UPDATE, instance=self, description="unvoided")
 
 
 class BaseOpenmrsMetadata(BaseOpenmrsObject):
@@ -187,18 +193,24 @@ class BaseOpenmrsMetadata(BaseOpenmrsObject):
         super().save(*args, **kwargs)
 
     def retire(self, user=None, reason=""):
+        from apps.core.services import audit
+
         self.retired = True
         self.retired_at = timezone.now()
         self.retired_by = user
         self.retire_reason = reason
         self.save(update_fields=["retired", "retired_at", "retired_by", "retire_reason"])
+        audit.record(AuditLog.Action.VOID, instance=self, actor=user, description=reason)
 
     def unretire(self):
+        from apps.core.services import audit
+
         self.retired = False
         self.retired_at = None
         self.retired_by = None
         self.retire_reason = ""
         self.save(update_fields=["retired", "retired_at", "retired_by", "retire_reason"])
+        audit.record(AuditLog.Action.UPDATE, instance=self, description="unretired")
 
 
 # ---------------------------------------------------------------------------
