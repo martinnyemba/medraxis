@@ -101,3 +101,5 @@ jobs:
           context: .
           push: false
           tags: medraxis:ci
+      - name: Validate docker-compose.yml
+        run: cp .env.example .env && docker compose config --quiet
