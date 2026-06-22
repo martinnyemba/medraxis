@@ -7,7 +7,9 @@ from apps.emr.api.serializers import (
     ConceptSerializer,
     DrugSerializer,
     EncounterSerializer,
+    EncounterTypeSerializer,
     FormSerializer,
+    LocationSerializer,
     ObsSerializer,
     OrderFrequencySerializer,
     OrderSerializer,
@@ -15,6 +17,7 @@ from apps.emr.api.serializers import (
     RelationshipSerializer,
     RelationshipTypeSerializer,
     VisitSerializer,
+    VisitTypeSerializer,
 )
 from apps.emr.services import next_order_number
 from apps.tenancy.mixins import TenantScopedQuerySetMixin
@@ -44,6 +47,33 @@ class PatientViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
         "person__names__family_name",
     ]
     filterset_fields = {"person__gender": ["exact"], "person__dead": ["exact"]}
+
+
+class VisitTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """Reference list of visit types (Outpatient, Inpatient, ...) for forms."""
+
+    queryset = m.VisitType.objects.filter(retired=False)
+    serializer_class = VisitTypeSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+
+
+class EncounterTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """Reference list of encounter types for forms."""
+
+    queryset = m.EncounterType.objects.filter(retired=False)
+    serializer_class = EncounterTypeSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+
+
+class LocationViewSet(TenantScopedQuerySetMixin, viewsets.ReadOnlyModelViewSet):
+    """Reference list of facility locations for forms (tenant-scoped)."""
+
+    queryset = m.Location.objects.filter(retired=False)
+    serializer_class = LocationSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
 
 
 class VisitViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):

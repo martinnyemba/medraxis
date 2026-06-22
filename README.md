@@ -237,12 +237,30 @@ Built on top of the core domains (see [`docs/platform_features.md`](docs/platfor
 - **Multi-tenant facility scoping**: row-level isolation by `Organization`,
   fail-closed on unauthorized `X-Organization` headers.
 
+## Front-end
+
+A **React + TypeScript SPA** (Vite, Tailwind + shadcn/ui, TanStack Query) lives
+in [`frontend/`](frontend/) and consumes this API over JWT. It implements the
+app shell (auth with silent token refresh, facility/tenant switcher,
+privilege-gated UI) and the full **EMR** vertical — patient registry &
+registration, visits, encounters and observation entry against the concept
+dictionary. The remaining verticals (LIS, Pharmacy, POS, Inventory, Billing,
+Finance) are routed as "coming soon" over their already-built APIs. See
+[`frontend/README.md`](frontend/README.md). The SPA's route/feature boundaries
+are aligned to the backend verticals per
+[`docs/packaging_architecture.md`](docs/packaging_architecture.md) §3.3.
+
+```bash
+cd frontend && npm install && npm run dev   # http://localhost:5173 (proxies to :8000)
+```
+
 ## Status
 
 Implemented across eleven apps: full data model, migrations, REST API, the
 integrative clinical/lab/pharmacy/POS workflows, the platform capabilities
-above, seed data, **31 passing tests**, and documentation. A front-end and
-write-side FHIR remain on the roadmap — neither requires reworking the data
+above, seed data, **31 passing tests**, and documentation — plus a React SPA
+front-end covering the EMR vertical (above). Write-side FHIR and the remaining
+front-end verticals remain on the roadmap; neither requires reworking the data
 model.
 
 ## License & attribution

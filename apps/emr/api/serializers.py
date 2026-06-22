@@ -101,6 +101,28 @@ class PatientSerializer(serializers.ModelSerializer):
         return instance
 
 
+class VisitTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.VisitType
+        fields = ["id", "uuid", "name", "description", "retired"]
+        read_only_fields = fields
+
+
+class EncounterTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.EncounterType
+        fields = ["id", "uuid", "name", "description", "retired"]
+        read_only_fields = fields
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.Location
+        fields = ["id", "uuid", "name", "description", "parent",
+                  "city_village", "country", "retired"]
+        read_only_fields = fields
+
+
 class VisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = m.Visit
