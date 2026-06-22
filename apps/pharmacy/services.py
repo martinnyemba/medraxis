@@ -1,6 +1,8 @@
 """Pharmacy dispensing service -- issues stock and records the event atomically."""
 from django.db import transaction
 
+from apps.core.models import AuditLog
+from apps.core.services import audit as audit_services
 from apps.inventory import services as inventory_services
 from apps.inventory.models import StockTransaction
 from apps.pharmacy.models import Dispense
@@ -34,4 +36,8 @@ def dispense(*, product, location, quantity, patient=None, drug_order=None,
         drug_order.fulfiller_status = drug_order.FulfillerStatus.COMPLETED
         drug_order.save(update_fields=["fulfiller_status", "changed_at"])
 
+    audit_services.record(
+        AuditLog.Action.CREATE, instance=dispense_event, actor=provider,
+        description=f"dispensed {quantity} {product.sku}",
+    )
     return dispense_event

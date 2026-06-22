@@ -235,6 +235,11 @@ multi-tenant facility scoping, GraphQL for complex client queries, and a
 front-end. None of these require reworking the data model — that is the point of
 following the OpenMRS architecture.
 
+See [`packaging_architecture.md`](packaging_architecture.md) for how
+medraxis's *build/bundle* architecture compares to OpenMRS's (Maven/`.omod`
+modules, the O3 Module Federation frontend, and the `docker-compose`-based
+distro), and the resulting packaging decisions.
+
 ---
 
 ## 10. References (used as design inspiration only)

@@ -45,6 +45,7 @@ the hard problems of clinical software (see [`docs/research.md`](docs/research.m
 | [`docs/flabs_research.md`](docs/flabs_research.md) | Reverse-engineered FLabs LIS analysis + gap closure (catalogue, B2B/branch, microbiology, QC, auto-verification, WhatsApp delivery) |
 | [`docs/business_ops_research.md`](docs/business_ops_research.md) | Reverse-engineered Valeron/Vyapar analysis + the accounting backbone (accounts, expenses, payables, party ledger, quotations, returns, GST) |
 | [`docs/payment_gateways.md`](docs/payment_gateways.md) | Payment-gateway design + Stripe / Flutterwave (mobile money) / Lenco integration |
+| [`docs/packaging_architecture.md`](docs/packaging_architecture.md) | How medraxis's build/bundle architecture compares to OpenMRS's, and the packaging decisions that follow |
 | [`SKILLS.md`](SKILLS.md) | Engineering standards followed by this project |
 
 ## Project structure
@@ -145,6 +146,13 @@ ruff check .
 python manage.py test apps
 ```
 
+To catch lint issues before they reach CI, enable the local pre-commit hook
+(mirrors the **Lint** job above):
+
+```bash
+pip install -r requirements-dev.txt && pre-commit install
+```
+
 Run the production image (migrates, then serves via gunicorn):
 
 ```bash
@@ -152,6 +160,20 @@ docker build -t medraxis .
 docker run -p 8000:8000 \
   -e DJANGO_SECRET_KEY=... -e DJANGO_ALLOWED_HOSTS=your.host \
   -e DATABASE_URL=postgres://user:pass@db:5432/medraxis medraxis
+```
+
+### Running the full stack with Docker Compose
+
+`docker-compose.yml` composes the web app, a Celery worker, Celery beat,
+Redis and PostgreSQL — see
+[`docs/packaging_architecture.md`](docs/packaging_architecture.md) for why
+this is medraxis's equivalent of OpenMRS's distro packaging layer.
+
+```bash
+cp .env.example .env   # edit DJANGO_SECRET_KEY; uncomment the compose
+                        # DATABASE_URL/REDIS_URL/CELERY_* lines
+docker compose up -d
+docker compose run --rm web python manage.py seed --demo
 ```
 
 ## Tech stack

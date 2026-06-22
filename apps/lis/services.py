@@ -2,6 +2,8 @@
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.models import AuditLog
+from apps.core.services import audit as audit_services
 from apps.emr.models import Obs
 from apps.lis.models import LabResult, Specimen
 
@@ -69,6 +71,9 @@ def enter_result(result: LabResult, *, provider=None):
     result.entered_by = provider
     result.entered_at = timezone.now()
     result.save()
+    audit_services.record(
+        AuditLog.Action.UPDATE, instance=result, actor=provider, description="lab result entered"
+    )
     return result
 
 
@@ -79,6 +84,9 @@ def verify_result(result: LabResult, *, provider=None):
     result.verified_by = provider
     result.verified_at = timezone.now()
     result.save(update_fields=["status", "verified_by", "verified_at", "changed_at"])
+    audit_services.record(
+        AuditLog.Action.UPDATE, instance=result, actor=provider, description="lab result verified"
+    )
     return result
 
 
@@ -106,4 +114,5 @@ def release_result(result: LabResult):
     # Advance the order's fulfilment status.
     order.fulfiller_status = order.FulfillerStatus.COMPLETED
     order.save(update_fields=["fulfiller_status", "changed_at"])
+    audit_services.record(AuditLog.Action.UPDATE, instance=result, description="lab result released")
     return result
