@@ -18,7 +18,9 @@ vertical can later be carved out along an existing seam.
 | **EMR** — patient registry, registration, visits, encounters, observations | ✅ Built |
 | **LIS** — worklist, ordering, specimen accession/collect/receive, result worksheet (enter → verify → release), test catalog, report/label PDFs | ✅ Built |
 | **POS** — sales list, terminal (product search → cart → location), complete (stock issue), payments, receipt PDF, customers | ✅ Built |
-| Pharmacy, Inventory, Billing, Finance | 🚧 Routed as "coming soon" (backend API already exists) |
+| **Pharmacy** — prescriptions list, prescribing on the patient timeline, dispensing against a prescription (stock issue) | ✅ Built |
+| **Inventory** — products (create, receive stock), product detail (batches + movements), suppliers, stock ledger, purchase orders | ✅ Built |
+| Billing, Finance | 🚧 Routed as "coming soon" (backend API already exists) |
 
 ## Prerequisites
 
@@ -82,7 +84,8 @@ src/
     emr/            # EMR vertical (patients, visits, encounters, observations)
     lis/            # Laboratory vertical (worklist, ordering, specimens, results)
     pos/            # Point-of-sale vertical (sales, terminal, payments, customers)
-    inventory/      # shared product API (used by the POS cart)
+    pharmacy/       # Pharmacy vertical (prescriptions, dispensing)
+    inventory/      # Inventory vertical (products, stock, suppliers, POs)
     placeholder/    # "coming soon" pages for unbuilt verticals
   App.tsx           # routing (per-vertical code-split lazy routes)
   main.tsx          # providers (QueryClient, Toast)

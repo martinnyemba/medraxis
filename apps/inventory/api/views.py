@@ -15,32 +15,40 @@ from apps.inventory.api.serializers import (
     StockTransactionSerializer,
     SupplierSerializer,
     TaxRateSerializer,
+    UnitOfMeasureSerializer,
 )
 from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
+class UnitOfMeasureViewSet(viewsets.ModelViewSet):
+    queryset = m.UnitOfMeasure.objects.filter(retired=False).order_by("name")
+    serializer_class = UnitOfMeasureSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+
+
 class ProductCategoryViewSet(viewsets.ModelViewSet):
-    queryset = m.ProductCategory.objects.all()
+    queryset = m.ProductCategory.objects.all().order_by("name")
     serializer_class = ProductCategorySerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name"]
 
 
 class TaxRateViewSet(viewsets.ModelViewSet):
-    queryset = m.TaxRate.objects.all()
+    queryset = m.TaxRate.objects.all().order_by("name")
     serializer_class = TaxRateSerializer
     permission_classes = [IsAuthenticated]
 
 
 class SupplierViewSet(viewsets.ModelViewSet):
-    queryset = m.Supplier.objects.all()
+    queryset = m.Supplier.objects.all().order_by("name")
     serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name", "contact_person", "phone", "tax_identifier"]
 
 
 class ProductViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
-    queryset = m.Product.objects.select_related("category", "unit", "tax_rate")
+    queryset = m.Product.objects.select_related("category", "unit", "tax_rate").order_by("name")
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name", "sku", "barcode", "strength"]

@@ -23,9 +23,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, enabled: true },
   { label: "EMR", to: "/emr/patients", icon: Stethoscope, enabled: true },
   { label: "Laboratory", to: "/lis/worklist", icon: FlaskConical, enabled: true },
-  { label: "Pharmacy", to: "/pharmacy", icon: Pill, enabled: false },
+  { label: "Pharmacy", to: "/pharmacy/prescriptions", icon: Pill, enabled: true },
   { label: "Point of Sale", to: "/pos/sales", icon: ShoppingCart, enabled: true },
-  { label: "Inventory", to: "/inventory", icon: Boxes, enabled: false },
+  { label: "Inventory", to: "/inventory/products", icon: Boxes, enabled: true },
   { label: "Billing", to: "/billing", icon: ReceiptText, enabled: false },
   { label: "Finance", to: "/finance", icon: Landmark, enabled: false },
 ];

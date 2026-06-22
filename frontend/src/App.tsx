@@ -26,6 +26,14 @@ const SalesListPage = named(() => import("@/features/pos/SalesListPage"), "Sales
 const NewSalePage = named(() => import("@/features/pos/NewSalePage"), "NewSalePage");
 const SaleDetailPage = named(() => import("@/features/pos/SaleDetailPage"), "SaleDetailPage");
 const CustomersPage = named(() => import("@/features/pos/CustomersPage"), "CustomersPage");
+const PrescriptionsListPage = named(() => import("@/features/pharmacy/PrescriptionsListPage"), "PrescriptionsListPage");
+const NewPrescriptionPage = named(() => import("@/features/pharmacy/NewPrescriptionPage"), "NewPrescriptionPage");
+const PrescriptionDetailPage = named(() => import("@/features/pharmacy/PrescriptionDetailPage"), "PrescriptionDetailPage");
+const ProductsListPage = named(() => import("@/features/inventory/ProductsListPage"), "ProductsListPage");
+const ProductDetailPage = named(() => import("@/features/inventory/ProductDetailPage"), "ProductDetailPage");
+const SuppliersPage = named(() => import("@/features/inventory/SuppliersPage"), "SuppliersPage");
+const StockLedgerPage = named(() => import("@/features/inventory/StockLedgerPage"), "StockLedgerPage");
+const PurchaseOrdersPage = named(() => import("@/features/inventory/PurchaseOrdersPage"), "PurchaseOrdersPage");
 const ComingSoonPage = named(() => import("@/features/placeholder/ComingSoonPage"), "ComingSoonPage");
 
 export default function App() {
@@ -97,23 +105,39 @@ export default function App() {
                 }
               />
 
+              {/* Pharmacy vertical */}
+              <Route
+                path="pharmacy/*"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<Navigate to="prescriptions" replace />} />
+                      <Route path="prescriptions" element={<PrescriptionsListPage />} />
+                      <Route path="prescriptions/new" element={<NewPrescriptionPage />} />
+                      <Route path="prescriptions/:orderId" element={<PrescriptionDetailPage />} />
+                    </Routes>
+                  </Suspense>
+                }
+              />
+
+              {/* Inventory vertical */}
+              <Route
+                path="inventory/*"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<Navigate to="products" replace />} />
+                      <Route path="products" element={<ProductsListPage />} />
+                      <Route path="products/:productId" element={<ProductDetailPage />} />
+                      <Route path="suppliers" element={<SuppliersPage />} />
+                      <Route path="ledger" element={<StockLedgerPage />} />
+                      <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+                    </Routes>
+                  </Suspense>
+                }
+              />
+
               {/* Verticals on the roadmap (backend exists; UI pending). */}
-              <Route
-                path="pharmacy"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <ComingSoonPage title="Pharmacy" />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="inventory"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <ComingSoonPage title="Inventory" />
-                  </Suspense>
-                }
-              />
               <Route
                 path="billing"
                 element={

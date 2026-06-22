@@ -7,11 +7,13 @@ from apps.inventory.api.views import (
     StockTransactionViewSet,
     SupplierViewSet,
     TaxRateViewSet,
+    UnitOfMeasureViewSet,
 )
 
 
 def register_routes(router):
     router.register("inventory/categories", ProductCategoryViewSet, basename="product-category")
+    router.register("inventory/units", UnitOfMeasureViewSet, basename="unit-of-measure")
     router.register("inventory/tax-rates", TaxRateViewSet, basename="tax-rate")
     router.register("inventory/suppliers", SupplierViewSet, basename="supplier")
     router.register("inventory/products", ProductViewSet, basename="product")

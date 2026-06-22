@@ -5,12 +5,16 @@ import {
   Stethoscope,
   FlaskConical,
   ShoppingCart,
+  Pill,
+  Boxes,
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 import { emrApi } from "@/features/emr/api";
 import { lisApi } from "@/features/lis/api";
 import { posApi } from "@/features/pos/api";
+import { pharmacyApi } from "@/features/pharmacy/api";
+import { inventoryApi } from "@/features/inventory/api";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useTenant } from "@/features/tenancy/TenantContext";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -32,6 +36,14 @@ export function DashboardPage() {
   const sales = useQuery({
     queryKey: ["sales", { count: true }],
     queryFn: () => posApi.listSales({ page: 1, page_size: 1 }),
+  });
+  const prescriptions = useQuery({
+    queryKey: ["drug-orders", { count: true }],
+    queryFn: () => pharmacyApi.listDrugOrders({ page: 1, page_size: 1 }),
+  });
+  const products = useQuery({
+    queryKey: ["products", { count: true }],
+    queryFn: () => inventoryApi.listProducts({ page: 1, page_size: 1 }),
   });
 
   const greeting = user?.first_name ? `Welcome back, ${user.first_name}` : "Welcome back";
@@ -65,6 +77,20 @@ export function DashboardPage() {
           to="/pos/sales"
           cta="View sales"
         />
+        <StatCard
+          icon={Pill}
+          label="Prescriptions"
+          value={prescriptions.data?.count ?? "—"}
+          to="/pharmacy/prescriptions"
+          cta="View prescriptions"
+        />
+        <StatCard
+          icon={Boxes}
+          label="Products"
+          value={products.data?.count ?? "—"}
+          to="/inventory/products"
+          cta="View inventory"
+        />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -89,11 +115,24 @@ export function DashboardPage() {
           cta="Go to POS"
           description="Ring up product sales, draw down stock on completion, take payments and print GST-ready receipts."
         />
+        <ModuleCard
+          icon={Pill}
+          title="Pharmacy"
+          to="/pharmacy/prescriptions"
+          cta="Go to pharmacy"
+          description="Prescribe medications on the patient timeline and dispense against prescriptions, issuing stock from the shared ledger."
+        />
+        <ModuleCard
+          icon={Boxes}
+          title="Inventory"
+          to="/inventory/products"
+          cta="Go to inventory"
+          description="Manage products, receive stock into batches, track the append-only stock ledger, suppliers and purchase orders."
+        />
       </div>
 
       <p className="mt-6 text-sm text-muted-foreground">
-        Pharmacy, Inventory, Billing and Finance share the same patient timeline and stock ledger
-        and are coming next.
+        Billing and Finance share the same patient timeline and stock ledger and are coming next.
       </p>
     </div>
   );

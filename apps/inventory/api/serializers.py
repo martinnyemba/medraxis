@@ -4,6 +4,13 @@ from apps.emr.models import Location
 from apps.inventory import models as m
 
 
+class UnitOfMeasureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = m.UnitOfMeasure
+        fields = ["id", "uuid", "name", "description", "retired"]
+        read_only_fields = ["uuid", "retired"]
+
+
 class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = m.ProductCategory
