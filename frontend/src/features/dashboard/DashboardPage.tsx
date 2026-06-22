@@ -7,6 +7,8 @@ import {
   ShoppingCart,
   Pill,
   Boxes,
+  ReceiptText,
+  Landmark,
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +17,8 @@ import { lisApi } from "@/features/lis/api";
 import { posApi } from "@/features/pos/api";
 import { pharmacyApi } from "@/features/pharmacy/api";
 import { inventoryApi } from "@/features/inventory/api";
+import { billingApi } from "@/features/billing/api";
+import { financeApi } from "@/features/finance/api";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useTenant } from "@/features/tenancy/TenantContext";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -44,6 +48,14 @@ export function DashboardPage() {
   const products = useQuery({
     queryKey: ["products", { count: true }],
     queryFn: () => inventoryApi.listProducts({ page: 1, page_size: 1 }),
+  });
+  const services = useQuery({
+    queryKey: ["billing", "services", { count: true }],
+    queryFn: () => billingApi.listServices({ page: 1, page_size: 1 }),
+  });
+  const accounts = useQuery({
+    queryKey: ["finance", "accounts", { count: true }],
+    queryFn: () => financeApi.listAccounts({ page: 1, page_size: 1 }),
   });
 
   const greeting = user?.first_name ? `Welcome back, ${user.first_name}` : "Welcome back";
@@ -91,6 +103,20 @@ export function DashboardPage() {
           to="/inventory/products"
           cta="View inventory"
         />
+        <StatCard
+          icon={ReceiptText}
+          label="Billable services"
+          value={services.data?.count ?? "—"}
+          to="/billing/services"
+          cta="View billing"
+        />
+        <StatCard
+          icon={Landmark}
+          label="Finance accounts"
+          value={accounts.data?.count ?? "—"}
+          to="/finance/accounts"
+          cta="View finance"
+        />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -129,11 +155,21 @@ export function DashboardPage() {
           cta="Go to inventory"
           description="Manage products, receive stock into batches, track the append-only stock ledger, suppliers and purchase orders."
         />
+        <ModuleCard
+          icon={ReceiptText}
+          title="Billing"
+          to="/billing/services"
+          cta="Go to billing"
+          description="Price chargeable clinical services and manage the insurance schemes and patient policies that pay for them."
+        />
+        <ModuleCard
+          icon={Landmark}
+          title="Finance"
+          to="/finance/accounts"
+          cta="Go to finance"
+          description="Track cash/bank accounts, record expenses and supplier payments, and watch every customer's and supplier's running balance."
+        />
       </div>
-
-      <p className="mt-6 text-sm text-muted-foreground">
-        Billing and Finance share the same patient timeline and stock ledger and are coming next.
-      </p>
     </div>
   );
 }

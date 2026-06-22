@@ -34,6 +34,13 @@ const ProductDetailPage = named(() => import("@/features/inventory/ProductDetail
 const SuppliersPage = named(() => import("@/features/inventory/SuppliersPage"), "SuppliersPage");
 const StockLedgerPage = named(() => import("@/features/inventory/StockLedgerPage"), "StockLedgerPage");
 const PurchaseOrdersPage = named(() => import("@/features/inventory/PurchaseOrdersPage"), "PurchaseOrdersPage");
+const BillableServicesPage = named(() => import("@/features/billing/BillableServicesPage"), "BillableServicesPage");
+const InsurancePage = named(() => import("@/features/billing/InsurancePage"), "InsurancePage");
+const AccountsPage = named(() => import("@/features/finance/AccountsPage"), "AccountsPage");
+const ExpensesPage = named(() => import("@/features/finance/ExpensesPage"), "ExpensesPage");
+const PurchaseBillsPage = named(() => import("@/features/finance/PurchaseBillsPage"), "PurchaseBillsPage");
+const SupplierPaymentsPage = named(() => import("@/features/finance/SupplierPaymentsPage"), "SupplierPaymentsPage");
+const PartyLedgerPage = named(() => import("@/features/finance/PartyLedgerPage"), "PartyLedgerPage");
 const ComingSoonPage = named(() => import("@/features/placeholder/ComingSoonPage"), "ComingSoonPage");
 
 export default function App() {
@@ -137,20 +144,33 @@ export default function App() {
                 }
               />
 
-              {/* Verticals on the roadmap (backend exists; UI pending). */}
+              {/* Billing vertical */}
               <Route
-                path="billing"
+                path="billing/*"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <ComingSoonPage title="Billing" />
+                    <Routes>
+                      <Route index element={<Navigate to="services" replace />} />
+                      <Route path="services" element={<BillableServicesPage />} />
+                      <Route path="insurance" element={<InsurancePage />} />
+                    </Routes>
                   </Suspense>
                 }
               />
+
+              {/* Finance vertical */}
               <Route
-                path="finance"
+                path="finance/*"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <ComingSoonPage title="Finance" />
+                    <Routes>
+                      <Route index element={<Navigate to="accounts" replace />} />
+                      <Route path="accounts" element={<AccountsPage />} />
+                      <Route path="expenses" element={<ExpensesPage />} />
+                      <Route path="purchase-bills" element={<PurchaseBillsPage />} />
+                      <Route path="supplier-payments" element={<SupplierPaymentsPage />} />
+                      <Route path="party-ledger" element={<PartyLedgerPage />} />
+                    </Routes>
                   </Suspense>
                 }
               />

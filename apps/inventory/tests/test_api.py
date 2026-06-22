@@ -1,11 +1,12 @@
 """API tests for the inventory endpoints used by the front-end: the unit-of-
-measure reference list, product creation and stock receipt."""
+measure reference list, product creation, stock receipt and purchase bills."""
 from decimal import Decimal
 
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.emr.models import Location
-from apps.inventory.models import Product, ProductCategory, UnitOfMeasure
+from apps.inventory.models import Product, ProductCategory, Supplier, UnitOfMeasure
 from apps.users.models import User
 
 
@@ -54,3 +55,20 @@ class InventoryApiTests(APITestCase):
         res = self.client.get("/api/v1/inventory/products/low_stock/")
         self.assertEqual(res.status_code, 200)
         self.assertIn("LOW", [p["sku"] for p in res.data["results"]])
+
+    def test_create_purchase_bill_without_date_receives_stock(self):
+        supplier = Supplier.objects.create(name="Acme Pharma")
+        product = Product.objects.create(
+            name="Gauze", sku="GAUZE-1", category=self.category, unit=self.unit)
+        res = self.client.post(
+            "/api/v1/inventory/purchase-bills/",
+            {"supplier": supplier.id, "location": self.location.id,
+             "items": [{"product": product.id, "quantity": "10", "unit_cost": "1.00"}]},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data["bill_date"], str(timezone.now().date()))
+        self.assertEqual(res.data["supplier_name"], "Acme Pharma")
+        self.assertEqual(res.data["grand_total"], "10.00")
+        product.refresh_from_db()
+        self.assertEqual(product.quantity_on_hand, Decimal("10"))

@@ -4,7 +4,7 @@ from decimal import Decimal
 from rest_framework.test import APITestCase
 
 from apps.billing.models import BillableService, InsuranceScheme, PatientInsurance
-from apps.emr.models import Patient, Person
+from apps.emr.models import Patient, Person, PersonName
 from apps.users.models import User
 
 
@@ -60,8 +60,18 @@ class PatientInsuranceApiTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user("pi-u", "pi@x.io", "pw-strong-123")
         person = Person.objects.create(gender="F")
+        PersonName.objects.create(person=person, given_name="Jane", family_name="Mwale", preferred=True)
         self.patient = Patient.objects.create(person=person)
         self.scheme = InsuranceScheme.objects.create(name="NHIMA", coverage_percent=Decimal("80"))
+
+    def test_create_includes_patient_and_scheme_name(self):
+        self.client.force_authenticate(self.user)
+        res = self.client.post("/api/v1/billing/patient-insurance/", {
+            "patient": self.patient.id, "scheme": self.scheme.id, "policy_number": "NH-001",
+        })
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.data["patient_name"], "Jane Mwale")
+        self.assertEqual(res.data["scheme_name"], "NHIMA")
 
     def test_unauthenticated_request_is_rejected(self):
         resp = self.client.get("/api/v1/billing/patient-insurance/")

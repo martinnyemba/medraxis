@@ -26,6 +26,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Pharmacy", to: "/pharmacy/prescriptions", icon: Pill, enabled: true },
   { label: "Point of Sale", to: "/pos/sales", icon: ShoppingCart, enabled: true },
   { label: "Inventory", to: "/inventory/products", icon: Boxes, enabled: true },
-  { label: "Billing", to: "/billing", icon: ReceiptText, enabled: false },
-  { label: "Finance", to: "/finance", icon: Landmark, enabled: false },
+  { label: "Billing", to: "/billing/services", icon: ReceiptText, enabled: true },
+  { label: "Finance", to: "/finance/accounts", icon: Landmark, enabled: true },
 ];

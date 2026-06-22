@@ -24,7 +24,7 @@ class InsuranceSchemeViewSet(viewsets.ModelViewSet):
 
 
 class PatientInsuranceViewSet(viewsets.ModelViewSet):
-    queryset = m.PatientInsurance.objects.select_related("scheme", "patient")
+    queryset = m.PatientInsurance.objects.select_related("scheme", "patient", "patient__person")
     serializer_class = PatientInsuranceSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["patient", "scheme", "is_active"]

@@ -256,9 +256,12 @@ privilege-gated UI) and three full verticals:
 - **Inventory** — products (create, receive stock into batches), product detail
   (batches + stock movements), suppliers, the append-only stock ledger and
   purchase orders.
+- **Billing** — billable service catalogue and insurance (schemes & patient
+  policies).
+- **Finance** — cash/bank accounts with transaction drill-down, expenses,
+  purchase bills, supplier payments and the customer/supplier party ledger.
 
-The remaining verticals (Billing, Finance) are routed as "coming soon" over
-their already-built APIs. Routes are code-split per vertical.
+All seven verticals are fully built and code-split per route.
 See [`frontend/README.md`](frontend/README.md). The SPA's route/feature
 boundaries are aligned to the backend verticals per
 [`docs/packaging_architecture.md`](docs/packaging_architecture.md) §3.3.
@@ -271,10 +274,10 @@ cd frontend && npm install && npm run dev   # http://localhost:5173 (proxies to 
 
 Implemented across eleven apps: full data model, migrations, REST API, the
 integrative clinical/lab/pharmacy/POS workflows, the platform capabilities
-above, seed data, **119 passing tests**, and documentation — plus a React SPA
-front-end covering the EMR, LIS, POS, Pharmacy and Inventory verticals (above).
-Write-side FHIR and the remaining front-end verticals (Billing, Finance) remain
-on the roadmap; neither requires reworking the data model.
+above, seed data, **125 passing tests**, and documentation — plus a React SPA
+front-end covering all seven verticals (EMR, LIS, POS, Pharmacy, Inventory,
+Billing, Finance) above. Write-side FHIR remains on the roadmap; it does not
+require reworking the data model.
 
 ## License & attribution
 

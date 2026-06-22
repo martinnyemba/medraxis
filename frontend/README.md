@@ -20,7 +20,8 @@ vertical can later be carved out along an existing seam.
 | **POS** — sales list, terminal (product search → cart → location), complete (stock issue), payments, receipt PDF, customers | ✅ Built |
 | **Pharmacy** — prescriptions list, prescribing on the patient timeline, dispensing against a prescription (stock issue) | ✅ Built |
 | **Inventory** — products (create, receive stock), product detail (batches + movements), suppliers, stock ledger, purchase orders | ✅ Built |
-| Billing, Finance | 🚧 Routed as "coming soon" (backend API already exists) |
+| **Billing** — billable service catalogue, insurance schemes & patient policies | ✅ Built |
+| **Finance** — cash/bank accounts (transaction drill-down), expenses, purchase bills, supplier payments, customer/supplier party ledger | ✅ Built |
 
 ## Prerequisites
 
@@ -86,7 +87,9 @@ src/
     pos/            # Point-of-sale vertical (sales, terminal, payments, customers)
     pharmacy/       # Pharmacy vertical (prescriptions, dispensing)
     inventory/      # Inventory vertical (products, stock, suppliers, POs)
-    placeholder/    # "coming soon" pages for unbuilt verticals
+    billing/        # Billing vertical (billable services, insurance schemes & policies)
+    finance/        # Finance vertical (accounts, expenses, purchase bills, supplier payments, party ledger)
+    placeholder/    # "coming soon" 404 fallback
   App.tsx           # routing (per-vertical code-split lazy routes)
   main.tsx          # providers (QueryClient, Toast)
 ```
