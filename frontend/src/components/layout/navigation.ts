@@ -22,9 +22,9 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, enabled: true },
   { label: "EMR", to: "/emr/patients", icon: Stethoscope, enabled: true },
-  { label: "Laboratory", to: "/lis", icon: FlaskConical, enabled: false },
+  { label: "Laboratory", to: "/lis/worklist", icon: FlaskConical, enabled: true },
   { label: "Pharmacy", to: "/pharmacy", icon: Pill, enabled: false },
-  { label: "Point of Sale", to: "/pos", icon: ShoppingCart, enabled: false },
+  { label: "Point of Sale", to: "/pos/sales", icon: ShoppingCart, enabled: true },
   { label: "Inventory", to: "/inventory", icon: Boxes, enabled: false },
   { label: "Billing", to: "/billing", icon: ReceiptText, enabled: false },
   { label: "Finance", to: "/finance", icon: Landmark, enabled: false },

@@ -16,7 +16,9 @@ vertical can later be carved out along an existing seam.
 |---|---|
 | App shell, auth (JWT + silent refresh), tenant switcher | ✅ Built |
 | **EMR** — patient registry, registration, visits, encounters, observations | ✅ Built |
-| LIS, Pharmacy, POS, Inventory, Billing, Finance | 🚧 Routed as "coming soon" (backend API already exists) |
+| **LIS** — worklist, ordering, specimen accession/collect/receive, result worksheet (enter → verify → release), test catalog, report/label PDFs | ✅ Built |
+| **POS** — sales list, terminal (product search → cart → location), complete (stock issue), payments, receipt PDF, customers | ✅ Built |
+| Pharmacy, Inventory, Billing, Finance | 🚧 Routed as "coming soon" (backend API already exists) |
 
 ## Prerequisites
 
@@ -78,10 +80,17 @@ src/
     tenancy/        # TenantContext (facility switcher)
     dashboard/      # landing page
     emr/            # EMR vertical (patients, visits, encounters, observations)
+    lis/            # Laboratory vertical (worklist, ordering, specimens, results)
+    pos/            # Point-of-sale vertical (sales, terminal, payments, customers)
+    inventory/      # shared product API (used by the POS cart)
     placeholder/    # "coming soon" pages for unbuilt verticals
-  App.tsx           # routing
+  App.tsx           # routing (per-vertical code-split lazy routes)
   main.tsx          # providers (QueryClient, Toast)
 ```
+
+Each vertical's routes are lazy-loaded as a separate bundle, so a module's
+code only loads when its routes are visited — keeping the boundaries the
+backend verticals already define.
 
 ## How auth & tenancy work
 

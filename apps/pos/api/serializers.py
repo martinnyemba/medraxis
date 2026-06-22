@@ -50,6 +50,9 @@ class SaleSerializer(serializers.ModelSerializer):
                   "lines", "payments", "created_at"]
         read_only_fields = ["invoice_number", "subtotal", "discount_total", "tax_total",
                             "grand_total", "amount_paid", "balance_due", "created_at"]
+        # Defaults to the active facility's location when omitted (see
+        # SaleViewSet.perform_create), so a counter sale needs only its lines.
+        extra_kwargs = {"location": {"required": False}}
 
     def create(self, validated_data):
         lines = validated_data.pop("lines", [])

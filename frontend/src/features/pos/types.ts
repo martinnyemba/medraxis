@@ -1,0 +1,88 @@
+/** POS domain types mirroring apps/pos/api/serializers.py. */
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  tax_identifier: string;
+  patient: number | null;
+}
+
+export type SaleStatus =
+  | "DRAFT"
+  | "COMPLETED"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "VOID"
+  | "REFUNDED";
+
+export type LineType = "PRODUCT" | "SERVICE" | "LAB_TEST" | "LAB_PROFILE" | "CONSULTATION";
+
+export interface SaleLine {
+  id?: number;
+  line_type: LineType;
+  product?: number | null;
+  lab_test?: number | null;
+  test_profile?: number | null;
+  billable_service?: number | null;
+  description: string;
+  quantity: string;
+  unit_price?: string;
+  discount_percent?: string;
+  tax_percent?: string;
+  issued_stock?: boolean;
+  discount_amount?: string;
+  tax_amount?: string;
+  line_total?: string;
+}
+
+export type PaymentMethod =
+  | "CASH"
+  | "CARD"
+  | "MOBILE_MONEY"
+  | "INSURANCE"
+  | "BANK_TRANSFER"
+  | "CREDIT";
+
+export interface Payment {
+  id: number;
+  sale: number;
+  method: PaymentMethod;
+  status: string;
+  amount: string;
+  reference: string;
+  received_by: number | null;
+  created_at: string;
+}
+
+export interface Sale {
+  id: number;
+  invoice_number: string;
+  customer: number | null;
+  client: number | null;
+  patient: number | null;
+  location: number | null;
+  status: SaleStatus;
+  cashier: number | null;
+  subtotal: string;
+  discount_total: string;
+  tax_total: string;
+  grand_total: string;
+  amount_paid: string;
+  balance_due: string;
+  currency: string;
+  note: string;
+  lines: SaleLine[];
+  payments: Payment[];
+  created_at: string;
+}
+
+export interface SaleCreateInput {
+  customer?: number | null;
+  patient?: number | null;
+  location?: number | null;
+  note?: string;
+  lines: SaleLine[];
+}

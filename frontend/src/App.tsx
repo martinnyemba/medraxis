@@ -1,13 +1,32 @@
+import { Suspense, lazy, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/AuthContext";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { AppShell } from "@/components/layout/AppShell";
-import { DashboardPage } from "@/features/dashboard/DashboardPage";
-import { PatientsListPage } from "@/features/emr/patients/PatientsListPage";
-import { PatientRegisterPage } from "@/features/emr/patients/PatientRegisterPage";
-import { PatientDetailPage } from "@/features/emr/patients/PatientDetailPage";
-import { ComingSoonPage } from "@/features/placeholder/ComingSoonPage";
+import { PageLoader } from "@/components/ui/spinner";
+
+// Page-level components are code-split per vertical so each module's bundle
+// loads on demand (mirrors the backend's vertical boundaries).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const named = <T extends Record<string, ComponentType<any>>>(
+  loader: () => Promise<T>,
+  key: keyof T,
+) => lazy(() => loader().then((m) => ({ default: m[key] })));
+
+const DashboardPage = named(() => import("@/features/dashboard/DashboardPage"), "DashboardPage");
+const PatientsListPage = named(() => import("@/features/emr/patients/PatientsListPage"), "PatientsListPage");
+const PatientRegisterPage = named(() => import("@/features/emr/patients/PatientRegisterPage"), "PatientRegisterPage");
+const PatientDetailPage = named(() => import("@/features/emr/patients/PatientDetailPage"), "PatientDetailPage");
+const LabWorklistPage = named(() => import("@/features/lis/LabWorklistPage"), "LabWorklistPage");
+const NewLabOrderPage = named(() => import("@/features/lis/NewLabOrderPage"), "NewLabOrderPage");
+const LabOrderDetailPage = named(() => import("@/features/lis/LabOrderDetailPage"), "LabOrderDetailPage");
+const TestCatalogPage = named(() => import("@/features/lis/TestCatalogPage"), "TestCatalogPage");
+const SalesListPage = named(() => import("@/features/pos/SalesListPage"), "SalesListPage");
+const NewSalePage = named(() => import("@/features/pos/NewSalePage"), "NewSalePage");
+const SaleDetailPage = named(() => import("@/features/pos/SaleDetailPage"), "SaleDetailPage");
+const CustomersPage = named(() => import("@/features/pos/CustomersPage"), "CustomersPage");
+const ComingSoonPage = named(() => import("@/features/placeholder/ComingSoonPage"), "ComingSoonPage");
 
 export default function App() {
   return (
@@ -17,26 +36,109 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route element={<AppShell />}>
-              <Route index element={<DashboardPage />} />
+            <Route
+              element={
+                <AppShell />
+              }
+            >
+              <Route
+                index
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <DashboardPage />
+                  </Suspense>
+                }
+              />
 
               {/* EMR vertical */}
-              <Route path="emr">
-                <Route index element={<Navigate to="/emr/patients" replace />} />
-                <Route path="patients" element={<PatientsListPage />} />
-                <Route path="patients/new" element={<PatientRegisterPage />} />
-                <Route path="patients/:patientId" element={<PatientDetailPage />} />
-              </Route>
+              <Route
+                path="emr/*"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<Navigate to="patients" replace />} />
+                      <Route path="patients" element={<PatientsListPage />} />
+                      <Route path="patients/new" element={<PatientRegisterPage />} />
+                      <Route path="patients/:patientId" element={<PatientDetailPage />} />
+                    </Routes>
+                  </Suspense>
+                }
+              />
+
+              {/* LIS vertical */}
+              <Route
+                path="lis/*"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<Navigate to="worklist" replace />} />
+                      <Route path="worklist" element={<LabWorklistPage />} />
+                      <Route path="orders/new" element={<NewLabOrderPage />} />
+                      <Route path="orders/:orderId" element={<LabOrderDetailPage />} />
+                      <Route path="catalog" element={<TestCatalogPage />} />
+                    </Routes>
+                  </Suspense>
+                }
+              />
+
+              {/* POS vertical */}
+              <Route
+                path="pos/*"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route index element={<Navigate to="sales" replace />} />
+                      <Route path="sales" element={<SalesListPage />} />
+                      <Route path="sales/new" element={<NewSalePage />} />
+                      <Route path="sales/:saleId" element={<SaleDetailPage />} />
+                      <Route path="customers" element={<CustomersPage />} />
+                    </Routes>
+                  </Suspense>
+                }
+              />
 
               {/* Verticals on the roadmap (backend exists; UI pending). */}
-              <Route path="lis" element={<ComingSoonPage title="Laboratory (LIS)" />} />
-              <Route path="pharmacy" element={<ComingSoonPage title="Pharmacy" />} />
-              <Route path="pos" element={<ComingSoonPage title="Point of Sale" />} />
-              <Route path="inventory" element={<ComingSoonPage title="Inventory" />} />
-              <Route path="billing" element={<ComingSoonPage title="Billing" />} />
-              <Route path="finance" element={<ComingSoonPage title="Finance" />} />
+              <Route
+                path="pharmacy"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ComingSoonPage title="Pharmacy" />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="inventory"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ComingSoonPage title="Inventory" />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="billing"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ComingSoonPage title="Billing" />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="finance"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ComingSoonPage title="Finance" />
+                  </Suspense>
+                }
+              />
 
-              <Route path="*" element={<ComingSoonPage title="Page not found" />} />
+              <Route
+                path="*"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ComingSoonPage title="Page not found" />
+                  </Suspense>
+                }
+              />
             </Route>
           </Route>
         </Routes>

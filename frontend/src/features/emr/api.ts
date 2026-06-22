@@ -37,6 +37,7 @@ export const emrApi = {
 
   // Concepts (for observation entry) --------------------------------------
   listConcepts: (params?: ListParams) => api.get<Paginated<Concept>>("/concepts/", params),
+  getConcept: (id: number) => api.get<Concept>(`/concepts/${id}/`),
 
   // Reference metadata -----------------------------------------------------
   listVisitTypes: () => api.get<Paginated<NamedRef>>("/visit-types/", { page_size: 200 }),

@@ -52,7 +52,7 @@ class PatientViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
 class VisitTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """Reference list of visit types (Outpatient, Inpatient, ...) for forms."""
 
-    queryset = m.VisitType.objects.filter(retired=False)
+    queryset = m.VisitType.objects.filter(retired=False).order_by("name")
     serializer_class = VisitTypeSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name"]
@@ -61,7 +61,7 @@ class VisitTypeViewSet(viewsets.ReadOnlyModelViewSet):
 class EncounterTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """Reference list of encounter types for forms."""
 
-    queryset = m.EncounterType.objects.filter(retired=False)
+    queryset = m.EncounterType.objects.filter(retired=False).order_by("name")
     serializer_class = EncounterTypeSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name"]
@@ -70,7 +70,7 @@ class EncounterTypeViewSet(viewsets.ReadOnlyModelViewSet):
 class LocationViewSet(TenantScopedQuerySetMixin, viewsets.ReadOnlyModelViewSet):
     """Reference list of facility locations for forms (tenant-scoped)."""
 
-    queryset = m.Location.objects.filter(retired=False)
+    queryset = m.Location.objects.filter(retired=False).order_by("name")
     serializer_class = LocationSerializer
     permission_classes = [IsAuthenticated]
     search_fields = ["name"]

@@ -242,12 +242,20 @@ Built on top of the core domains (see [`docs/platform_features.md`](docs/platfor
 A **React + TypeScript SPA** (Vite, Tailwind + shadcn/ui, TanStack Query) lives
 in [`frontend/`](frontend/) and consumes this API over JWT. It implements the
 app shell (auth with silent token refresh, facility/tenant switcher,
-privilege-gated UI) and the full **EMR** vertical — patient registry &
-registration, visits, encounters and observation entry against the concept
-dictionary. The remaining verticals (LIS, Pharmacy, POS, Inventory, Billing,
-Finance) are routed as "coming soon" over their already-built APIs. See
-[`frontend/README.md`](frontend/README.md). The SPA's route/feature boundaries
-are aligned to the backend verticals per
+privilege-gated UI) and three full verticals:
+
+- **EMR** — patient registry & registration, visits, encounters and observation
+  entry against the concept dictionary.
+- **LIS** — lab worklist, ordering, specimen accession/collect/receive, and the
+  result worksheet through enter → verify → release (posting to the chart), plus
+  test catalog and report/label PDFs.
+- **POS** — sales terminal (product search → cart → location), completion with
+  stock issue, payments, receipt PDFs and customers.
+
+The remaining verticals (Pharmacy, Inventory, Billing, Finance) are routed as
+"coming soon" over their already-built APIs. Routes are code-split per vertical.
+See [`frontend/README.md`](frontend/README.md). The SPA's route/feature
+boundaries are aligned to the backend verticals per
 [`docs/packaging_architecture.md`](docs/packaging_architecture.md) §3.3.
 
 ```bash
@@ -258,10 +266,10 @@ cd frontend && npm install && npm run dev   # http://localhost:5173 (proxies to 
 
 Implemented across eleven apps: full data model, migrations, REST API, the
 integrative clinical/lab/pharmacy/POS workflows, the platform capabilities
-above, seed data, **31 passing tests**, and documentation — plus a React SPA
-front-end covering the EMR vertical (above). Write-side FHIR and the remaining
-front-end verticals remain on the roadmap; neither requires reworking the data
-model.
+above, seed data, **111 passing tests**, and documentation — plus a React SPA
+front-end covering the EMR, LIS and POS verticals (above). Write-side FHIR and
+the remaining front-end verticals remain on the roadmap; neither requires
+reworking the data model.
 
 ## License & attribution
 
