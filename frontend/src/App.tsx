@@ -18,6 +18,8 @@ const DashboardPage = named(() => import("@/features/dashboard/DashboardPage"), 
 const PatientsListPage = named(() => import("@/features/emr/patients/PatientsListPage"), "PatientsListPage");
 const PatientRegisterPage = named(() => import("@/features/emr/patients/PatientRegisterPage"), "PatientRegisterPage");
 const PatientDetailPage = named(() => import("@/features/emr/patients/PatientDetailPage"), "PatientDetailPage");
+const CohortsListPage = named(() => import("@/features/emr/cohorts/CohortsListPage"), "CohortsListPage");
+const CohortDetailPage = named(() => import("@/features/emr/cohorts/CohortDetailPage"), "CohortDetailPage");
 const LabWorklistPage = named(() => import("@/features/lis/LabWorklistPage"), "LabWorklistPage");
 const NewLabOrderPage = named(() => import("@/features/lis/NewLabOrderPage"), "NewLabOrderPage");
 const LabOrderDetailPage = named(() => import("@/features/lis/LabOrderDetailPage"), "LabOrderDetailPage");
@@ -77,6 +79,8 @@ export default function App() {
                       <Route path="patients" element={<PatientsListPage />} />
                       <Route path="patients/new" element={<PatientRegisterPage />} />
                       <Route path="patients/:patientId" element={<PatientDetailPage />} />
+                      <Route path="cohorts" element={<CohortsListPage />} />
+                      <Route path="cohorts/:cohortId" element={<CohortDetailPage />} />
                     </Routes>
                   </Suspense>
                 }

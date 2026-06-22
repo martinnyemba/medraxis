@@ -2,6 +2,8 @@ import { api } from "@/lib/api/client";
 import type { Paginated } from "@/lib/api/types";
 import type {
   Allergy,
+  Cohort,
+  CohortMembership,
   Concept,
   Condition,
   Diagnosis,
@@ -9,7 +11,20 @@ import type {
   NamedRef,
   Obs,
   Patient,
+  PatientIdentifier,
+  PatientIdentifierType,
+  PatientProgram,
   PatientRegistrationInput,
+  PatientState,
+  PersonAddress,
+  PersonAttribute,
+  PersonAttributeType,
+  PersonName,
+  Program,
+  ProgramWorkflow,
+  ProgramWorkflowState,
+  Relationship,
+  RelationshipType,
   Visit,
 } from "./types";
 
@@ -59,4 +74,60 @@ export const emrApi = {
   listEncounterTypes: () =>
     api.get<Paginated<NamedRef>>("/encounter-types/", { page_size: 200 }),
   listLocations: () => api.get<Paginated<NamedRef>>("/locations/", { page_size: 200 }),
+
+  // Person names & patient identifiers (post-registration editing) --------
+  createPersonName: (data: Partial<PersonName> & { person: number }) =>
+    api.post<PersonName>("/person-names/", data),
+  createPatientIdentifier: (data: Partial<PatientIdentifier> & { patient: number }) =>
+    api.post<PatientIdentifier>("/patient-identifiers/", data),
+  listPatientIdentifierTypes: () =>
+    api.get<Paginated<PatientIdentifierType>>("/patient-identifier-types/", { page_size: 200 }),
+
+  // Person addresses --------------------------------------------------------
+  listPersonAddresses: (params?: ListParams) =>
+    api.get<Paginated<PersonAddress>>("/person-addresses/", params),
+  createPersonAddress: (data: Partial<PersonAddress> & { person: number }) =>
+    api.post<PersonAddress>("/person-addresses/", data),
+
+  // Person attributes --------------------------------------------------------
+  listPersonAttributeTypes: () =>
+    api.get<Paginated<PersonAttributeType>>("/person-attribute-types/", { page_size: 200 }),
+  listPersonAttributes: (params?: ListParams) =>
+    api.get<Paginated<PersonAttribute>>("/person-attributes/", params),
+  createPersonAttribute: (data: Partial<PersonAttribute> & { person: number }) =>
+    api.post<PersonAttribute>("/person-attributes/", data),
+
+  // Relationships -------------------------------------------------------------
+  listRelationshipTypes: () =>
+    api.get<Paginated<RelationshipType>>("/relationship-types/", { page_size: 200 }),
+  listRelationships: (params?: ListParams) =>
+    api.get<Paginated<Relationship>>("/relationships/", params),
+  createRelationship: (data: Partial<Relationship>) =>
+    api.post<Relationship>("/relationships/", data),
+
+  // Programs & enrolment -----------------------------------------------------
+  listPrograms: () => api.get<Paginated<Program>>("/programs/", { page_size: 200 }),
+  listProgramWorkflows: (params?: ListParams) =>
+    api.get<Paginated<ProgramWorkflow>>("/program-workflows/", params),
+  listProgramWorkflowStates: (params?: ListParams) =>
+    api.get<Paginated<ProgramWorkflowState>>("/program-workflow-states/", params),
+  listPatientPrograms: (params?: ListParams) =>
+    api.get<Paginated<PatientProgram>>("/patient-programs/", params),
+  enrolPatientInProgram: (data: Partial<PatientProgram> & { patient: number; program: number }) =>
+    api.post<PatientProgram>("/patient-programs/", data),
+  completePatientProgram: (id: number, date_completed: string) =>
+    api.patch<PatientProgram>(`/patient-programs/${id}/`, { date_completed }),
+  addPatientState: (data: Partial<PatientState> & { patient_program: number; state: number }) =>
+    api.post<PatientState>("/patient-states/", data),
+
+  // Cohorts ---------------------------------------------------------------
+  listCohorts: (params?: ListParams) => api.get<Paginated<Cohort>>("/cohorts/", params),
+  getCohort: (id: number) => api.get<Cohort>(`/cohorts/${id}/`),
+  createCohort: (data: Partial<Cohort>) => api.post<Cohort>("/cohorts/", data),
+  listCohortMemberships: (params?: ListParams) =>
+    api.get<Paginated<CohortMembership>>("/cohort-memberships/", params),
+  addCohortMember: (data: Partial<CohortMembership> & { cohort: number; patient: number }) =>
+    api.post<CohortMembership>("/cohort-memberships/", data),
+  endCohortMembership: (id: number, end_date: string) =>
+    api.patch<CohortMembership>(`/cohort-memberships/${id}/`, { end_date }),
 };

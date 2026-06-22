@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Search, UserPlus, Users } from "lucide-react";
+import { Layers, Search, UserPlus, Users } from "lucide-react";
 import { emrApi } from "../api";
 import { patientName, preferredIdentifier, genderLabel, ageFromBirthdate } from "@/lib/format";
 import { useDebounce } from "@/lib/hooks";
@@ -50,13 +50,20 @@ export function PatientsListPage() {
         title="Patients"
         description="Register and search the patient master index."
         actions={
-          canRegister && (
-            <Button asChild>
-              <Link to="/emr/patients/new">
-                <UserPlus className="size-4" /> Register patient
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/emr/cohorts">
+                <Layers className="size-4" /> Cohorts
               </Link>
             </Button>
-          )
+            {canRegister && (
+              <Button asChild>
+                <Link to="/emr/patients/new">
+                  <UserPlus className="size-4" /> Register patient
+                </Link>
+              </Button>
+            )}
+          </div>
         }
       />
 

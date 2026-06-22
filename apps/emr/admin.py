@@ -93,5 +93,16 @@ for model in (
     m.LocationAttributeType,
     m.ConceptAttributeType,
     m.ProgramAttributeType,
+    # Previously unexposed models -- admin-manageable until/unless they get a
+    # dedicated frontend.
+    m.PersonAddress,
+    m.PersonAttribute,
+    m.EncounterProvider,
+    m.ProgramWorkflow,
+    m.ProgramWorkflowState,
+    m.PatientProgram,
+    m.PatientState,
+    m.PatientProgramAttribute,
+    m.CohortMembership,
 ):
     admin.site.register(model)

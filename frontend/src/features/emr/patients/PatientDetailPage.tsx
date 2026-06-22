@@ -18,6 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisitsTab } from "./components/VisitsTab";
 import { EncountersTab } from "./components/EncountersTab";
 import { ClinicalTab } from "./components/ClinicalTab";
+import { DemographicsTab } from "./components/DemographicsTab";
+import { RelationshipsTab } from "./components/RelationshipsTab";
+import { ProgramsTab } from "./components/ProgramsTab";
 
 export function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -89,6 +92,9 @@ export function PatientDetailPage() {
           <TabsTrigger value="visits">Visits</TabsTrigger>
           <TabsTrigger value="encounters">Encounters &amp; Observations</TabsTrigger>
           <TabsTrigger value="clinical">Clinical Records</TabsTrigger>
+          <TabsTrigger value="demographics">Demographics</TabsTrigger>
+          <TabsTrigger value="relationships">Relationships</TabsTrigger>
+          <TabsTrigger value="programs">Programs</TabsTrigger>
         </TabsList>
         <TabsContent value="visits">
           <VisitsTab patientId={patient.id} />
@@ -98,6 +104,15 @@ export function PatientDetailPage() {
         </TabsContent>
         <TabsContent value="clinical">
           <ClinicalTab patient={patient} />
+        </TabsContent>
+        <TabsContent value="demographics">
+          <DemographicsTab patient={patient} />
+        </TabsContent>
+        <TabsContent value="relationships">
+          <RelationshipsTab patient={patient} />
+        </TabsContent>
+        <TabsContent value="programs">
+          <ProgramsTab patient={patient} />
         </TabsContent>
       </Tabs>
     </div>

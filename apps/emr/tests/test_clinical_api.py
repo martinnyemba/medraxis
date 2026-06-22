@@ -9,7 +9,7 @@ from apps.emr.models import (
     PatientIdentifierType,
     Person,
 )
-from apps.users.models import User
+from apps.users.models import Privilege, Role, User
 
 
 class ClinicalRecordsApiTests(APITestCase):
@@ -17,6 +17,12 @@ class ClinicalRecordsApiTests(APITestCase):
         PatientIdentifierType.objects.create(name="Medraxis ID", required=True)
         self.user = User.objects.create_user(
             username="doc", email="doc@x.io", password="pw-strong-123")
+        role = Role.objects.create(name="Clinician")
+        role.privileges.set([
+            Privilege.objects.create(name="View Clinical Records"),
+            Privilege.objects.create(name="Manage Clinical Records"),
+        ])
+        self.user.roles.add(role)
 
         cc = ConceptClass.objects.create(name="Diagnosis")
         dt = ConceptDatatype.objects.create(name="Coded")

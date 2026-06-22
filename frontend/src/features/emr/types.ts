@@ -10,6 +10,16 @@ export interface PersonName {
   family_name_suffix: string;
 }
 
+export interface PatientIdentifierType {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  required: boolean;
+  uniqueness_behavior: "UNIQUE" | "NON_UNIQUE" | "LOCATION";
+  retired: boolean;
+}
+
 export interface PatientIdentifier {
   id: number;
   identifier_type: number;
@@ -24,6 +34,7 @@ export type Gender = "M" | "F" | "O" | "U";
 export interface Patient {
   id: number;
   uuid: string;
+  person_id: number;
   gender: Gender | null;
   birthdate: string | null;
   names: PersonName[];
@@ -162,4 +173,133 @@ export interface NamedRef {
   name: string;
   description?: string;
   retired?: boolean;
+}
+
+export interface PersonAddress {
+  id: number;
+  uuid: string;
+  person: number;
+  preferred: boolean;
+  address1: string;
+  address2: string;
+  city_village: string;
+  county_district: string;
+  state_province: string;
+  country: string;
+  postal_code: string;
+  voided: boolean;
+}
+
+export interface PersonAttributeType {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  format: string;
+  searchable: boolean;
+  sort_weight: number;
+  retired: boolean;
+}
+
+export interface PersonAttribute {
+  id: number;
+  uuid: string;
+  person: number;
+  attribute_type: number;
+  attribute_type_name: string;
+  value: string;
+  voided: boolean;
+}
+
+export interface RelationshipType {
+  id: number;
+  uuid: string;
+  name: string;
+  a_is_to_b: string;
+  b_is_to_a: string;
+  weight: number;
+  retired: boolean;
+}
+
+export interface Relationship {
+  id: number;
+  uuid: string;
+  person_a: number;
+  person_b: number;
+  relationship_type: number;
+  start_date: string | null;
+  end_date: string | null;
+  voided: boolean;
+}
+
+export interface Program {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  concept: number | null;
+  retired: boolean;
+}
+
+export interface ProgramWorkflow {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  program: number;
+  retired: boolean;
+}
+
+export interface ProgramWorkflowState {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  workflow: number;
+  initial: boolean;
+  terminal: boolean;
+  retired: boolean;
+}
+
+export interface PatientState {
+  id: number;
+  uuid: string;
+  patient_program: number;
+  state: number;
+  state_name: string;
+  start_date: string;
+  end_date: string | null;
+  voided: boolean;
+}
+
+export interface PatientProgram {
+  id: number;
+  uuid: string;
+  patient: number;
+  program: number;
+  program_name: string;
+  location: number | null;
+  date_enrolled: string;
+  date_completed: string | null;
+  states: PatientState[];
+  voided: boolean;
+}
+
+export interface Cohort {
+  id: number;
+  uuid: string;
+  name: string;
+  description: string;
+  member_count: number;
+  retired: boolean;
+}
+
+export interface CohortMembership {
+  id: number;
+  uuid: string;
+  cohort: number;
+  patient: number;
+  start_date: string | null;
+  end_date: string | null;
+  voided: boolean;
 }
