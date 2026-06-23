@@ -3,6 +3,8 @@ import type { Paginated } from "@/lib/api/types";
 import type {
   Customer,
   Payment,
+  Quotation,
+  QuotationCreateInput,
   Sale,
   SaleCreateInput,
   PaymentMethod,
@@ -36,4 +38,12 @@ export const posApi = {
   createSalesReturn: (data: SalesReturnCreateInput) =>
     api.post<SalesReturn>("/pos/sales-returns/", data),
   processSalesReturn: (id: number) => api.post<SalesReturn>(`/pos/sales-returns/${id}/process/`),
+
+  // Quotations / estimates -------------------------------------------------
+  listQuotations: (params?: ListParams) =>
+    api.get<Paginated<Quotation>>("/pos/quotations/", params),
+  getQuotation: (id: number) => api.get<Quotation>(`/pos/quotations/${id}/`),
+  createQuotation: (data: QuotationCreateInput) =>
+    api.post<Quotation>("/pos/quotations/", data),
+  convertQuotation: (id: number) => api.post<Sale>(`/pos/quotations/${id}/convert/`),
 };

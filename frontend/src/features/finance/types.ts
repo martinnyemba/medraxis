@@ -124,3 +124,56 @@ export interface PartyStatement {
   balance: string;
   entries: PartyLedgerEntry[];
 }
+
+// --- Business reports ------------------------------------------------------
+
+export interface BusinessSummary {
+  date_from: string;
+  date_to: string;
+  sales_count: number;
+  revenue: string;
+  net_sales: string;
+  cogs: string;
+  gross_profit: string;
+  gross_margin_percent: string;
+  net_profit: string;
+  collected: string;
+  expenses: string;
+  supplier_payments: string;
+  net_cash: string;
+  expenses_by_category: { category: string | null; amount: string }[];
+}
+
+export interface DayBookEntry {
+  id: number;
+  account: string;
+  direction: "IN" | "OUT";
+  amount: string;
+  balance_after: string;
+  reference_type: string;
+  reference_id: string;
+  note: string;
+  occurred_at: string;
+}
+
+export interface DayBook {
+  date: string;
+  money_in: string;
+  money_out: string;
+  net: string;
+  entries: DayBookEntry[];
+}
+
+export interface OutstandingRow {
+  party_type: string;
+  party_id: number;
+  party_name: string;
+  balance: string;
+}
+
+export interface Outstanding {
+  receivable_total: string;
+  payable_total: string;
+  receivables: OutstandingRow[];
+  payables: OutstandingRow[];
+}

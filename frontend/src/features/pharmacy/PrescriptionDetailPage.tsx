@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, PackageMinus, Pill } from "lucide-react";
+import { ArrowLeft, Ban, PackageMinus, Pill, Undo2 } from "lucide-react";
 import { pharmacyApi } from "./api";
 import { useLocations } from "@/features/emr/queries";
 import { ApiError } from "@/lib/api/types";
@@ -42,6 +42,8 @@ import {
 export function PrescriptionDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const id = Number(orderId);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const order = useQuery({
     queryKey: ["drug-order", id],
@@ -55,12 +57,28 @@ export function PrescriptionDetailPage() {
     enabled: Number.isFinite(id),
   });
 
+  const discontinue = useMutation({
+    mutationFn: () => pharmacyApi.discontinue(id),
+    onSuccess: () => {
+      toast({ title: "Prescription discontinued", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ["drug-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["drug-orders"] });
+    },
+    onError: (err) =>
+      toast({
+        title: "Could not discontinue",
+        description: err instanceof ApiError ? err.toUserMessage() : undefined,
+        variant: "error",
+      }),
+  });
+
   if (order.isLoading) return <PageLoader />;
   if (order.isError || !order.data) return <ErrorState error={order.error} onRetry={order.refetch} />;
 
   const rx = order.data;
   const dispensed = Number(rx.quantity_dispensed);
   const remaining = Math.max(Number(rx.quantity) - dispensed, 0);
+  const discontinued = rx.order_action === "DISCONTINUE" || rx.date_stopped != null;
 
   return (
     <div className="space-y-6">
@@ -74,11 +92,25 @@ export function PrescriptionDetailPage() {
           title={rx.drug_name}
           description={`Prescription ${rx.order_number}`}
           actions={
-            remaining > 0 ? (
-              <DispenseDialog orderId={rx.id} remaining={remaining} />
-            ) : (
-              <StatusBadge status="COMPLETED" />
-            )
+            <div className="flex items-center gap-2">
+              {discontinued ? (
+                <StatusBadge status="DISCONTINUE" />
+              ) : remaining > 0 ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => discontinue.mutate()}
+                    disabled={discontinue.isPending}
+                  >
+                    {discontinue.isPending ? <Spinner className="size-4" /> : <Ban className="size-4" />}
+                    Discontinue
+                  </Button>
+                  <DispenseDialog orderId={rx.id} remaining={remaining} />
+                </>
+              ) : (
+                <StatusBadge status="COMPLETED" />
+              )}
+            </div>
           }
         />
       </div>
@@ -128,6 +160,7 @@ export function PrescriptionDetailPage() {
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -139,6 +172,9 @@ export function PrescriptionDetailPage() {
                     <TableCell className="text-right">{money(d.line_total)}</TableCell>
                     <TableCell>
                       <StatusBadge status={d.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {d.status === "DISPENSED" && <ReverseButton dispenseId={d.id} orderId={id} />}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -161,6 +197,31 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <div className="text-sm font-medium">{children}</div>
     </div>
+  );
+}
+
+function ReverseButton({ dispenseId, orderId }: { dispenseId: number; orderId: number }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const reverse = useMutation({
+    mutationFn: () => pharmacyApi.reverseDispense(dispenseId),
+    onSuccess: () => {
+      toast({ title: "Dispense returned — stock restocked", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ["dispenses", { order: orderId }] });
+      queryClient.invalidateQueries({ queryKey: ["drug-order", orderId] });
+    },
+    onError: (err) =>
+      toast({
+        title: "Could not return dispense",
+        description: err instanceof ApiError ? err.toUserMessage() : undefined,
+        variant: "error",
+      }),
+  });
+  return (
+    <Button size="sm" variant="ghost" onClick={() => reverse.mutate()} disabled={reverse.isPending}>
+      {reverse.isPending ? <Spinner className="size-3" /> : <Undo2 className="size-3" />}
+      Return
+    </Button>
   );
 }
 

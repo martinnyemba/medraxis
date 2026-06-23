@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -17,7 +18,8 @@ from apps.finance.api.serializers import (
     TaxComponentSerializer,
 )
 from apps.finance.ledger import party_balance
-from apps.tenancy.mixins import TenantScopedQuerySetMixin
+from apps.finance import reports
+from apps.tenancy.mixins import TenantResolverMixin, TenantScopedQuerySetMixin
 
 
 class FinancialAccountViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
@@ -148,3 +150,36 @@ class PartyLedgerViewSet(viewsets.ViewSet):
             request.query_params.get("party_type"),
             request.query_params.get("party_id"))
         return Response({"balance": party_balance(party)})
+
+
+class BusinessReportsViewSet(TenantResolverMixin, viewsets.ViewSet):
+    """Owner-facing business reports: summary, day book and outstanding.
+
+    Read-only aggregations scoped to the active tenant; see
+    :mod:`apps.finance.reports`.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _org(self, request):
+        return getattr(request, "organization", None)
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        """GET ?from=YYYY-MM-DD&to=YYYY-MM-DD -> period revenue/expenses/net."""
+        today = timezone.now().date()
+        date_to = reports.parse_date(request.query_params.get("to"), today)
+        date_from = reports.parse_date(
+            request.query_params.get("from"), date_to.replace(day=1))
+        return Response(reports.business_summary(self._org(request), date_from, date_to))
+
+    @action(detail=False, methods=["get"])
+    def day_book(self, request):
+        """GET ?date=YYYY-MM-DD -> money in/out for the day."""
+        date = reports.parse_date(request.query_params.get("date"))
+        return Response(reports.day_book(self._org(request), date))
+
+    @action(detail=False, methods=["get"])
+    def outstanding(self, request):
+        """Receivables and payables across all parties."""
+        return Response(reports.outstanding(self._org(request)))

@@ -33,6 +33,9 @@ export interface DrugOrder {
   dosing_instructions: string;
   date_activated: string | null;
   fulfiller_status: FulfillerStatus;
+  order_action: "NEW" | "REVISE" | "DISCONTINUE" | "RENEW";
+  date_stopped: string | null;
+  fulfiller_comment: string;
   quantity_dispensed: string | number;
   voided: boolean;
 }
@@ -68,4 +71,15 @@ export interface PrescribeInput {
   num_refills?: number;
   as_needed?: boolean;
   dosing_instructions?: string;
+  /** Proceed despite a documented drug allergy (audited server-side). */
+  override_allergy?: boolean;
+}
+
+export interface AllergyMatch {
+  id: number;
+  allergen: string;
+  severity: string;
+  reaction: string;
+  /** Why it matched: exact drug, an ingredient, or the drug class. */
+  match_reason: "exact" | "ingredient" | "class";
 }

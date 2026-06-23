@@ -1,14 +1,13 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FlaskConical, Search } from "lucide-react";
+import { FlaskConical, Search } from "lucide-react";
 import { lisApi } from "./api";
 import { useLabSections } from "./queries";
 import { useDebounce } from "@/lib/hooks";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Pagination } from "@/components/common/Pagination";
 import { EmptyState, ErrorState } from "@/components/common/states";
-import { Button } from "@/components/ui/button";
+import { LisTabs } from "./components/LisTabs";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,12 +42,9 @@ export function TestCatalogPage() {
 
   return (
     <div>
-      <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-        <Link to="/lis/worklist">
-          <ArrowLeft className="size-4" /> Back to worklist
-        </Link>
-      </Button>
       <PageHeader title="Test catalog" description="Orderable tests and panels." />
+
+      <LisTabs />
 
       <div className="mb-4 relative max-w-md">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

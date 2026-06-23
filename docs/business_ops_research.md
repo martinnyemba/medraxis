@@ -106,3 +106,26 @@ system.
 Financial models are out of FHIR's clinical scope; where billing interop is
 needed, `Sale`/`PurchaseBill` map to FHIR `Invoice` and `ChargeItem`, and GST
 data rides on the existing tax fields. No clinical model is affected.
+
+---
+
+## 6. Walk-in flows: the POS ↔ clinical bridge
+
+A `Sale` mixes line types (`PRODUCT`, `LAB_TEST`, `LAB_PROFILE`, `SERVICE`,
+`CONSULTATION`) and prices any of them through one resolver (`pos.pricing`), with
+`customer`/`client`/`patient` all optional — so a walk-in cash sale needs no
+account. Completing a sale (`pos.services.complete_sale`) now also **fulfils** the
+clinical side of each line, not just the money side:
+
+| Walk-in wants | Line type | On `complete_sale` |
+|---|---|---|
+| Buy medicine (OTC) | `PRODUCT` (drug) | Issues stock once as `SALE` (COGS intact) **and** records a `Dispense` (`sale` FK) with `DispenseBatch` traceability — controlled-drug auditability without double-moving stock. Its reversal is the **sales return**, so `reverse_dispense` refuses sale-linked dispenses. |
+| Buy a general product | `PRODUCT` | Issues stock as `SALE` (unchanged). |
+| A specific lab test | `LAB_TEST` | Opens the lab workflow: creates a LIS `TestOrder` (+ specimen shell) on the sale's patient, so it lands on the lab worklist. Requires a patient (else `SaleFulfillmentError`). Idempotent via `SaleLine.fulfilled`. |
+| A test package | `LAB_PROFILE` | Expands to one `TestOrder` per member test. |
+| A service / consultation | `SERVICE` / `CONSULTATION` | Billed only — nothing to fulfil. |
+
+Idempotency: product lines guard on `issued_stock`, clinical lines on the new
+`SaleLine.fulfilled`, so re-completing a sale never duplicates orders or stock.
+The POS "New sale" screen can add products, lab tests **and** services to one
+cart, with a patient selector that becomes required once a lab test is added.

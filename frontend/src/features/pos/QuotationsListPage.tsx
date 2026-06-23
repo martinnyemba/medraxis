@@ -1,9 +1,10 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, ShoppingCart, Plus, RotateCcw, Users } from "lucide-react";
+import { FileText, Plus, ShoppingCart } from "lucide-react";
 import { posApi } from "./api";
-import { money, formatDateTime } from "@/lib/format";
+import { money, formatDate } from "@/lib/format";
+import { useTenant } from "@/features/tenancy/TenantContext";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Pagination } from "@/components/common/Pagination";
 import { EmptyState, ErrorState } from "@/components/common/states";
@@ -20,41 +21,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export function SalesListPage() {
+export function QuotationsListPage() {
   const navigate = useNavigate();
+  const { current } = useTenant();
   const [page, setPage] = React.useState(1);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["sales", { page }],
-    queryFn: () => posApi.listSales({ page, ordering: "-created_at" }),
+    queryKey: ["quotations", { page }],
+    queryFn: () => posApi.listQuotations({ page, ordering: "-created_at" }),
     placeholderData: (prev) => prev,
   });
 
   return (
     <div>
       <PageHeader
-        title="Sales"
-        description="Point-of-sale invoices and their payment status."
+        title="Quotations"
+        description="Non-binding estimates that convert into a sale once accepted."
         actions={
           <div className="flex gap-2">
             <Button asChild variant="outline">
-              <Link to="/pos/quotations">
-                <FileText className="size-4" /> Quotations
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/pos/returns">
-                <RotateCcw className="size-4" /> Returns
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/pos/customers">
-                <Users className="size-4" /> Customers
+              <Link to="/pos/sales">
+                <ShoppingCart className="size-4" /> Sales
               </Link>
             </Button>
             <Button asChild>
-              <Link to="/pos/sales/new">
-                <Plus className="size-4" /> New sale
+              <Link to="/pos/quotations/new">
+                <Plus className="size-4" /> New quotation
               </Link>
             </Button>
           </div>
@@ -71,32 +63,28 @@ export function SalesListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice</TableHead>
+                  <TableHead>Quotation</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Items</TableHead>
+                  <TableHead>Valid until</TableHead>
                   <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.results.map((sale) => (
+                {data.results.map((q) => (
                   <TableRow
-                    key={sale.id}
+                    key={q.id}
                     className="cursor-pointer"
-                    onClick={() => navigate(`/pos/sales/${sale.id}`)}
+                    onClick={() => navigate(`/pos/quotations/${q.id}`)}
                   >
-                    <TableCell className="font-mono text-xs">{sale.invoice_number}</TableCell>
-                    <TableCell>{formatDateTime(sale.created_at)}</TableCell>
-                    <TableCell>{sale.lines.length}</TableCell>
+                    <TableCell className="font-mono text-xs">{q.quotation_number}</TableCell>
+                    <TableCell>{formatDate(q.created_at)}</TableCell>
+                    <TableCell>{formatDate(q.valid_until)}</TableCell>
                     <TableCell className="text-right font-medium">
-                      {money(sale.grand_total, sale.currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {money(sale.balance_due, sale.currency)}
+                      {money(q.grand_total, current?.currency)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={sale.status} />
+                      <StatusBadge status={q.status} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -113,13 +101,13 @@ export function SalesListPage() {
           </>
         ) : (
           <EmptyState
-            icon={<ShoppingCart className="size-8" />}
-            title="No sales yet"
-            description="Ring up the first sale to get started."
+            icon={<FileText className="size-8" />}
+            title="No quotations"
+            description="Create an estimate to quote a customer before they commit."
             action={
               <Button asChild>
-                <Link to="/pos/sales/new">
-                  <Plus className="size-4" /> New sale
+                <Link to="/pos/quotations/new">
+                  <Plus className="size-4" /> New quotation
                 </Link>
               </Button>
             }

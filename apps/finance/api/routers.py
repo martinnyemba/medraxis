@@ -1,5 +1,6 @@
 from apps.finance.api.views import (
     AccountTransactionViewSet,
+    BusinessReportsViewSet,
     ExpenseCategoryViewSet,
     ExpenseViewSet,
     FinancialAccountViewSet,
@@ -20,3 +21,4 @@ def register_routes(router):
                     basename="supplier-payment")
     router.register("finance/tax-components", TaxComponentViewSet, basename="tax-component")
     router.register("finance/party-ledger", PartyLedgerViewSet, basename="party-ledger")
+    router.register("finance/reports", BusinessReportsViewSet, basename="business-report")

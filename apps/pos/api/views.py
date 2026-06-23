@@ -65,7 +65,7 @@ class SaleViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
         sale = self.get_object()
         try:
             services.complete_sale(sale)
-        except InsufficientStock as exc:
+        except (InsufficientStock, services.SaleFulfillmentError) as exc:
             raise ValidationError(str(exc))
         return Response(self.get_serializer(sale).data)
 

@@ -24,11 +24,16 @@ const LabWorklistPage = named(() => import("@/features/lis/LabWorklistPage"), "L
 const NewLabOrderPage = named(() => import("@/features/lis/NewLabOrderPage"), "NewLabOrderPage");
 const LabOrderDetailPage = named(() => import("@/features/lis/LabOrderDetailPage"), "LabOrderDetailPage");
 const TestCatalogPage = named(() => import("@/features/lis/TestCatalogPage"), "TestCatalogPage");
+const QcPage = named(() => import("@/features/lis/QcPage"), "QcPage");
+const LabPartnersPage = named(() => import("@/features/lis/LabPartnersPage"), "LabPartnersPage");
 const SalesListPage = named(() => import("@/features/pos/SalesListPage"), "SalesListPage");
 const NewSalePage = named(() => import("@/features/pos/NewSalePage"), "NewSalePage");
 const SaleDetailPage = named(() => import("@/features/pos/SaleDetailPage"), "SaleDetailPage");
 const CustomersPage = named(() => import("@/features/pos/CustomersPage"), "CustomersPage");
 const SalesReturnsPage = named(() => import("@/features/pos/SalesReturnsPage"), "SalesReturnsPage");
+const QuotationsListPage = named(() => import("@/features/pos/QuotationsListPage"), "QuotationsListPage");
+const NewQuotationPage = named(() => import("@/features/pos/NewQuotationPage"), "NewQuotationPage");
+const QuotationDetailPage = named(() => import("@/features/pos/QuotationDetailPage"), "QuotationDetailPage");
 const PrescriptionsListPage = named(() => import("@/features/pharmacy/PrescriptionsListPage"), "PrescriptionsListPage");
 const NewPrescriptionPage = named(() => import("@/features/pharmacy/NewPrescriptionPage"), "NewPrescriptionPage");
 const PrescriptionDetailPage = named(() => import("@/features/pharmacy/PrescriptionDetailPage"), "PrescriptionDetailPage");
@@ -45,6 +50,7 @@ const ExpensesPage = named(() => import("@/features/finance/ExpensesPage"), "Exp
 const PurchaseBillsPage = named(() => import("@/features/finance/PurchaseBillsPage"), "PurchaseBillsPage");
 const SupplierPaymentsPage = named(() => import("@/features/finance/SupplierPaymentsPage"), "SupplierPaymentsPage");
 const PartyLedgerPage = named(() => import("@/features/finance/PartyLedgerPage"), "PartyLedgerPage");
+const ReportsPage = named(() => import("@/features/finance/ReportsPage"), "ReportsPage");
 const ComingSoonPage = named(() => import("@/features/placeholder/ComingSoonPage"), "ComingSoonPage");
 
 export default function App() {
@@ -97,6 +103,8 @@ export default function App() {
                       <Route path="orders/new" element={<NewLabOrderPage />} />
                       <Route path="orders/:orderId" element={<LabOrderDetailPage />} />
                       <Route path="catalog" element={<TestCatalogPage />} />
+                      <Route path="qc" element={<QcPage />} />
+                      <Route path="partners" element={<LabPartnersPage />} />
                     </Routes>
                   </Suspense>
                 }
@@ -114,6 +122,9 @@ export default function App() {
                       <Route path="sales/:saleId" element={<SaleDetailPage />} />
                       <Route path="returns" element={<SalesReturnsPage />} />
                       <Route path="customers" element={<CustomersPage />} />
+                      <Route path="quotations" element={<QuotationsListPage />} />
+                      <Route path="quotations/new" element={<NewQuotationPage />} />
+                      <Route path="quotations/:quotationId" element={<QuotationDetailPage />} />
                     </Routes>
                   </Suspense>
                 }
@@ -178,6 +189,7 @@ export default function App() {
                       <Route path="purchase-bills" element={<PurchaseBillsPage />} />
                       <Route path="supplier-payments" element={<SupplierPaymentsPage />} />
                       <Route path="party-ledger" element={<PartyLedgerPage />} />
+                      <Route path="reports" element={<ReportsPage />} />
                     </Routes>
                   </Suspense>
                 }
