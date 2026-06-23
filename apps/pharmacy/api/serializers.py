@@ -12,9 +12,10 @@ class DrugOrderSerializer(serializers.ModelSerializer):
         fields = ["id", "uuid", "order_number", "order_type", "concept", "patient", "encounter",
                   "orderer", "drug", "drug_name", "dose", "dose_units", "frequency", "route",
                   "duration", "duration_units", "quantity", "num_refills", "as_needed",
-                  "dosing_instructions", "date_activated", "fulfiller_status",
-                  "quantity_dispensed", "voided"]
-        read_only_fields = ["uuid", "order_number", "voided", "quantity_dispensed"]
+                  "dosing_instructions", "date_activated", "fulfiller_status", "order_action",
+                  "date_stopped", "fulfiller_comment", "quantity_dispensed", "voided"]
+        read_only_fields = ["uuid", "order_number", "voided", "quantity_dispensed",
+                            "order_action", "date_stopped"]
         # Derived from the chosen drug / request time when omitted (see
         # DrugOrderViewSet.perform_create), so a prescription needs only a
         # patient and a drug.

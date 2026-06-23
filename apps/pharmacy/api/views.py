@@ -1,7 +1,9 @@
 from django.utils import timezone
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.emr.services import next_order_number
 from apps.inventory.services import InsufficientStock
@@ -11,11 +13,53 @@ from apps.pharmacy.api.serializers import DispenseSerializer, DrugOrderSerialize
 from apps.tenancy.mixins import TenantScopedQuerySetMixin
 
 
+def _allergy_payload(allergies):
+    """Serialise matched allergies for an API warning."""
+    return [
+        {
+            "id": a.id,
+            "allergen": a.allergen.name if a.allergen_id else "",
+            "severity": a.severity,
+            "reaction": a.reaction,
+        }
+        for a in allergies
+    ]
+
+
 class DrugOrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
     queryset = m.DrugOrder.objects.select_related("patient", "drug", "orderer")
     serializer_class = DrugOrderSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["patient", "drug", "fulfiller_status"]
+
+    @action(detail=False, methods=["get"])
+    def allergy_check(self, request):
+        """GET ?patient=&drug= -> documented drug allergies that match the drug.
+
+        Lets the prescribing UI warn before submitting; an empty list means no
+        documented allergy to this drug.
+        """
+        from apps.emr.models import Patient
+        from apps.inventory.models import Product
+
+        patient = Patient.objects.filter(pk=request.query_params.get("patient")).first()
+        product = Product.objects.filter(pk=request.query_params.get("drug")).first()
+        allergies = services.check_drug_allergies(patient, product)
+        return Response({"allergies": _allergy_payload(allergies)})
+
+    @action(detail=True, methods=["post"])
+    def discontinue(self, request, pk=None):
+        """Stop an active prescription (OpenMRS DISCONTINUE order action)."""
+        order = self.get_object()
+        if not order.is_active:
+            raise ValidationError("This prescription is already inactive.")
+        order.order_action = order.Action.DISCONTINUE
+        order.date_stopped = timezone.now()
+        reason = request.data.get("reason", "")
+        if reason:
+            order.fulfiller_comment = reason
+        order.save(update_fields=["order_action", "date_stopped", "fulfiller_comment", "changed_at"])
+        return Response(self.get_serializer(order).data)
 
     def perform_create(self, serializer):
         """Create a prescription, deriving the EMR Order plumbing from the drug.
@@ -23,11 +67,27 @@ class DrugOrderViewSet(TenantScopedQuerySetMixin, viewsets.ModelViewSet):
         A client supplies ``patient`` and ``drug`` (plus dosing); the order type
         ("Drug Order"), the ordered ``concept`` (the product's clinical drug
         concept), the activation time and the prescriber are filled in here.
+
+        Prescribing is blocked when the patient has a documented allergy to the
+        drug, unless the caller passes ``override_allergy=true`` (the override is
+        audited via the order's fulfiller comment).
         """
         from apps.emr.models import OrderType
 
         drug = serializer.validated_data["drug"]
+        patient = serializer.validated_data.get("patient")
+        allergies = services.check_drug_allergies(patient, drug)
+        override = str(self.request.data.get("override_allergy", "")).lower() in ("1", "true", "yes")
+        if allergies and not override:
+            raise ValidationError({
+                "allergy": "Patient has a documented allergy to this drug.",
+                "allergies": _allergy_payload(allergies),
+            })
+
         extra = {"order_number": next_order_number()}
+        if allergies and override:
+            names = ", ".join(a.allergen.name for a in allergies if a.allergen_id)
+            extra["fulfiller_comment"] = f"Allergy override: {names}"[:255]
         if not serializer.validated_data.get("order_type"):
             extra["order_type"] = OrderType.objects.filter(name="Drug Order").first()
         if not serializer.validated_data.get("concept"):
@@ -76,3 +136,17 @@ class DispenseViewSet(viewsets.ModelViewSet):
         except InsufficientStock as exc:
             raise ValidationError(str(exc))
         serializer.instance = instance
+
+    @action(detail=True, methods=["post"])
+    def reverse(self, request, pk=None):
+        """Return a dispensed item to stock and mark it RETURNED."""
+        dispense = self.get_object()
+        try:
+            services.reverse_dispense(
+                dispense,
+                provider=getattr(request.user, "provider", None),
+                note=request.data.get("note", ""),
+            )
+        except services.DispenseReversalError as exc:
+            raise ValidationError(str(exc))
+        return Response(self.get_serializer(dispense).data, status=status.HTTP_200_OK)

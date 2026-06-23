@@ -48,6 +48,38 @@ def receive_stock(*, product, location, quantity, unit_cost=Decimal("0"),
 
 
 @transaction.atomic
+def return_to_stock(*, product, location, quantity, unit_cost=Decimal("0"),
+                    batch_number="", expiry_date=None, reference_type="", reference_id="", note=""):
+    """Put returned stock back on the shelf, writing a RETURN ledger row.
+
+    Used to reverse a dispense or a sale: it restores quantity to a batch and
+    records the movement as a RETURN (distinct from a supplier RECEIPT) so the
+    ledger stays auditable.
+    """
+    quantity = Decimal(str(quantity))
+    batch, _ = StockBatch.objects.select_for_update().get_or_create(
+        product=product, location=location, batch_number=batch_number,
+        defaults={"expiry_date": expiry_date, "cost_price": unit_cost},
+    )
+    batch.quantity_on_hand += quantity
+    if expiry_date:
+        batch.expiry_date = expiry_date
+    batch.save(update_fields=["quantity_on_hand", "expiry_date", "updated_at"])
+
+    txn = StockTransaction.objects.create(
+        product=product, batch=batch, location=location,
+        transaction_type=StockTransaction.TxnType.RETURN,
+        quantity=quantity, unit_cost=unit_cost or batch.cost_price,
+        reference_type=reference_type, reference_id=str(reference_id), note=note,
+    )
+    audit_services.record(
+        AuditLog.Action.CREATE, instance=txn,
+        description=f"stock returned: {quantity} {product.sku}",
+    )
+    return txn
+
+
+@transaction.atomic
 def issue_stock(*, product, location, quantity, transaction_type,
                 reference_type="", reference_id="", note=""):
     """Remove stock using FEFO across batches; writes negative ledger rows.

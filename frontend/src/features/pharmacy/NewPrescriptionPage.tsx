@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Pill } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { AlertTriangle, ArrowLeft, Pill } from "lucide-react";
 import { pharmacyApi } from "./api";
 import type { DurationUnit } from "./types";
 import type { Patient } from "@/features/emr/types";
@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PatientCombobox } from "@/components/common/PatientCombobox";
 import { ProductCombobox } from "@/components/common/ProductCombobox";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +42,26 @@ export function NewPrescriptionPage() {
     dosing_instructions: "",
   });
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [override, setOverride] = React.useState(false);
+
+  // Proactive allergy check once both patient and drug are chosen.
+  const allergyCheck = useQuery({
+    queryKey: ["allergy-check", patient?.id, drug?.id],
+    queryFn: () => pharmacyApi.allergyCheck(patient!.id, drug!.id),
+    enabled: !!patient && !!drug,
+  });
+  const allergies = allergyCheck.data?.allergies ?? [];
+  const hasAllergy = allergies.length > 0;
+
+  // Reset the override acknowledgement whenever the patient/drug pair changes.
+  function selectPatient(p: Patient | null) {
+    setPatient(p);
+    setOverride(false);
+  }
+  function selectDrug(p: Product | null) {
+    setDrug(p);
+    setOverride(false);
+  }
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -59,6 +80,7 @@ export function NewPrescriptionPage() {
         duration_units: form.duration_units,
         quantity: form.quantity || "0",
         dosing_instructions: form.dosing_instructions,
+        override_allergy: hasAllergy ? override : undefined,
       }),
     onSuccess: (rx) => {
       toast({ title: `Prescription ${rx.order_number} created`, variant: "success" });
@@ -73,6 +95,8 @@ export function NewPrescriptionPage() {
     setFormError(null);
     if (!patient) return setFormError("Select a patient.");
     if (!drug) return setFormError("Select a drug.");
+    if (hasAllergy && !override)
+      return setFormError("Acknowledge the allergy warning to prescribe this drug.");
     create.mutate();
   }
 
@@ -90,18 +114,42 @@ export function NewPrescriptionPage() {
           <form onSubmit={submit} className="space-y-5">
             <div className="space-y-2">
               <Label>Patient *</Label>
-              <PatientCombobox value={patient} onSelect={setPatient} />
+              <PatientCombobox value={patient} onSelect={selectPatient} />
             </div>
 
             <div className="space-y-2">
               <Label>Drug *</Label>
-              <ProductCombobox value={drug} onSelect={setDrug} drugsOnly />
+              <ProductCombobox value={drug} onSelect={selectDrug} drugsOnly />
               {drug && drug.drug_concept === null && (
                 <p className="text-xs text-warning">
                   This product has no clinical drug concept set; prescribing may be rejected.
                 </p>
               )}
             </div>
+
+            {hasAllergy && (
+              <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+                <p className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                  <AlertTriangle className="size-4" /> Allergy alert
+                </p>
+                <ul className="ml-6 list-disc text-sm text-destructive">
+                  {allergies.map((a) => (
+                    <li key={a.id}>
+                      {a.allergen}
+                      {a.severity ? ` — ${a.severity.toLowerCase()}` : ""}
+                      {a.reaction ? ` (${a.reaction})` : ""}
+                    </li>
+                  ))}
+                </ul>
+                <label className="flex items-center gap-2 text-sm text-destructive">
+                  <Checkbox
+                    checked={override}
+                    onCheckedChange={(v) => setOverride(!!v)}
+                  />
+                  Override: prescribe despite the documented allergy
+                </label>
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
@@ -205,7 +253,7 @@ export function NewPrescriptionPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={create.isPending}>
+              <Button type="submit" disabled={create.isPending || (hasAllergy && !override)}>
                 {create.isPending ? (
                   <Spinner className="size-4" />
                 ) : (
