@@ -80,4 +80,6 @@ export interface AllergyMatch {
   allergen: string;
   severity: string;
   reaction: string;
+  /** Why it matched: exact drug, an ingredient, or the drug class. */
+  match_reason: "exact" | "ingredient" | "class";
 }

@@ -1,8 +1,8 @@
 """Tests for pharmacy clinical-safety patches: allergy-aware prescribing,
 dispense reversal (restock) and prescription discontinuation."""
+from datetime import date
 from decimal import Decimal
 
-from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from apps.emr.models import (
@@ -10,6 +10,9 @@ from apps.emr.models import (
     Concept,
     ConceptClass,
     ConceptDatatype,
+    ConceptSetMembership,
+    Drug,
+    DrugIngredient,
     Location,
     OrderType,
     Patient,
@@ -18,7 +21,7 @@ from apps.emr.models import (
 from apps.inventory.models import Product, ProductCategory, UnitOfMeasure
 from apps.inventory.services import receive_stock
 from apps.pharmacy.models import Dispense, DrugOrder
-from apps.pharmacy.services import dispense, reverse_dispense
+from apps.pharmacy.services import check_drug_allergies, dispense, reverse_dispense
 from apps.users.models import User
 
 
@@ -28,14 +31,14 @@ class PharmacySafetyTests(APITestCase):
         self.client.force_authenticate(self.user)
 
         self.location = Location.objects.create(name="Pharmacy")
-        category = ProductCategory.objects.create(name="Meds")
-        unit = UnitOfMeasure.objects.create(name="Tablet")
-        klass = ConceptClass.objects.create(name="Drug")
-        datatype = ConceptDatatype.objects.create(name="Text")
+        self.category = ProductCategory.objects.create(name="Meds")
+        self.unit = UnitOfMeasure.objects.create(name="Tablet")
+        self.klass = ConceptClass.objects.create(name="Drug")
+        self.datatype = ConceptDatatype.objects.create(name="Text")
         self.concept = Concept.objects.create(
-            name="Penicillin", concept_class=klass, datatype=datatype)
+            name="Penicillin", concept_class=self.klass, datatype=self.datatype)
         self.product = Product.objects.create(
-            name="Penicillin V 250mg", sku="PEN-250", category=category, unit=unit,
+            name="Penicillin V 250mg", sku="PEN-250", category=self.category, unit=self.unit,
             sale_price=Decimal("2.00"), is_drug=True, drug_concept=self.concept)
         receive_stock(product=self.product, location=self.location, quantity=50,
                       batch_number="B1", unit_cost=Decimal("1.00"))
@@ -109,3 +112,51 @@ class PharmacySafetyTests(APITestCase):
         res = self.client.post(f"/api/v1/pharmacy/dispenses/{event.id}/reverse/")
         self.assertEqual(res.status_code, 200, res.data)
         self.assertEqual(res.data["status"], Dispense.Status.RETURNED)
+
+    # --- Class-level cross-reactivity --------------------------------------
+    def test_class_level_allergy_cross_reactivity(self):
+        # A "Penicillins" class concept whose member is the prescribed drug.
+        pen_class = Concept.objects.create(
+            name="Penicillins", concept_class=self.klass, datatype=self.datatype)
+        ConceptSetMembership.objects.create(concept_set=pen_class, member=self.concept)
+        Allergy.objects.create(patient=self.patient, allergen=pen_class)
+
+        res = self._prescribe()
+        self.assertEqual(res.status_code, 400, res.data)
+        detail = res.data["error"]["detail"]
+        self.assertEqual(detail["allergies"][0]["match_reason"], "class")
+
+    def test_ingredient_level_allergy_in_combination_drug(self):
+        # A combination product whose formulation contains the allergen ingredient.
+        combo_concept = Concept.objects.create(
+            name="Co-amoxiclav", concept_class=self.klass, datatype=self.datatype)
+        formulation = Drug.objects.create(name="Co-amoxiclav 625mg", concept=combo_concept)
+        DrugIngredient.objects.create(drug=formulation, ingredient=self.concept)
+        combo = Product.objects.create(
+            name="Co-amoxiclav 625mg", sku="COAMOX-625", category=self.category,
+            unit=self.unit, sale_price=Decimal("3.00"), is_drug=True,
+            drug_concept=combo_concept, drug=formulation)
+        Allergy.objects.create(patient=self.patient, allergen=self.concept)
+
+        matches = check_drug_allergies(self.patient, combo)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].match_reason, "ingredient")
+
+    # --- Batch traceability ------------------------------------------------
+    def test_dispense_records_batches_and_reversal_restocks_exactly(self):
+        product = Product.objects.create(
+            name="Ibuprofen 200mg", sku="IBU-200", category=self.category,
+            unit=self.unit, sale_price=Decimal("0.50"))
+        receive_stock(product=product, location=self.location, quantity=3,
+                      batch_number="E1", expiry_date=date(2030, 1, 1), unit_cost=Decimal("0.10"))
+        receive_stock(product=product, location=self.location, quantity=10,
+                      batch_number="E2", expiry_date=date(2031, 1, 1), unit_cost=Decimal("0.12"))
+
+        # FEFO: 3 from the earlier-expiry E1, then 2 from E2.
+        event = dispense(product=product, location=self.location, quantity=5,
+                         patient=self.patient)
+        self.assertEqual(event.batch_lines.count(), 2)
+        self.assertEqual(product.quantity_on_hand, Decimal("8"))
+
+        reverse_dispense(event)
+        self.assertEqual(product.quantity_on_hand, Decimal("13"))

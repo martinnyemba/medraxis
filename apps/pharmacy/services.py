@@ -6,33 +6,76 @@ from apps.core.models import AuditLog
 from apps.core.services import audit as audit_services
 from apps.inventory import services as inventory_services
 from apps.inventory.models import StockTransaction
-from apps.pharmacy.models import Dispense
+from apps.pharmacy.models import Dispense, DispenseBatch
 
 
 class DispenseReversalError(Exception):
     """Raised when a dispense cannot be reversed (already returned/cancelled)."""
 
 
-def check_drug_allergies(patient, product):
-    """Return the patient's active drug allergies that match this product.
+def _product_allergen_concepts(product):
+    """Concept ids relevant to allergy matching for a product.
 
-    A match is an active (non-voided) DRUG-category allergy whose allergen
-    concept is the product's clinical drug concept. This is the implementable,
-    deterministic core of allergy-aware prescribing: it surfaces a documented
-    allergy to the very drug being prescribed so the prescriber can confirm or
-    choose an alternative.
+    The product's clinical drug concept plus, for a combination drug, each of
+    its ingredient concepts -- so an allergy to one ingredient flags a
+    combination product that contains it.
     """
-    if patient is None or product is None or product.drug_concept_id is None:
-        return []
-    from apps.emr.models import Allergy
+    ids = set()
+    if product.drug_concept_id:
+        ids.add(product.drug_concept_id)
+    if product.drug_id:
+        from apps.emr.models import DrugIngredient
 
-    return list(
-        Allergy.objects.filter(
-            patient=patient,
-            allergen_id=product.drug_concept_id,
-            voided=False,
-        ).select_related("allergen")
+        ids.update(
+            DrugIngredient.objects.filter(drug_id=product.drug_id)
+            .values_list("ingredient_id", flat=True)
+        )
+    return ids
+
+
+def check_drug_allergies(patient, product):
+    """Return the patient's active allergies that contraindicate this product.
+
+    Matches at three levels, most-specific first:
+
+    * **exact** -- the allergen concept is the product's drug concept;
+    * **ingredient** -- the allergen is an ingredient of a combination product;
+    * **class** -- the allergen is a drug-class concept set that *contains* one of
+      the product's concepts (e.g. a "Penicillins" allergy flags amoxicillin).
+
+    Each returned allergy carries a ``match_reason`` attribute for the UI.
+    """
+    if patient is None or product is None:
+        return []
+    concept_ids = _product_allergen_concepts(product)
+    if not concept_ids:
+        return []
+    from apps.emr.models import Allergy, ConceptSetMembership
+
+    allergies = list(
+        Allergy.objects.filter(patient=patient, voided=False).select_related("allergen")
     )
+    if not allergies:
+        return []
+
+    # Drug-class concept sets that contain any of the product's concepts.
+    classes_containing = set(
+        ConceptSetMembership.objects.filter(member_id__in=concept_ids)
+        .values_list("concept_set_id", flat=True)
+    )
+
+    matched = []
+    for a in allergies:
+        if a.allergen_id == product.drug_concept_id:
+            a.match_reason = "exact"
+            matched.append(a)
+        elif a.allergen_id in concept_ids:
+            a.match_reason = "ingredient"
+            matched.append(a)
+        elif a.allergen_id in classes_containing:
+            a.match_reason = "class"
+            matched.append(a)
+    return matched
 
 
 @transaction.atomic
@@ -43,7 +86,7 @@ def dispense(*, product, location, quantity, patient=None, drug_order=None,
     Raises :class:`apps.inventory.services.InsufficientStock` if there is not
     enough on hand, rolling back cleanly.
     """
-    inventory_services.issue_stock(
+    txns = inventory_services.issue_stock(
         product=product, location=location, quantity=quantity,
         transaction_type=StockTransaction.TxnType.DISPENSE,
         reference_type="DISPENSE",
@@ -57,6 +100,12 @@ def dispense(*, product, location, quantity, patient=None, drug_order=None,
         drug_order=drug_order, patient=patient, product=product, location=location,
         quantity=quantity, unit_price=unit_price, dispensed_by=provider, note=note,
     )
+    # Record which batch(es) FEFO drew from, for traceability and exact reversal.
+    for t in txns:
+        DispenseBatch.objects.create(
+            dispense=dispense_event, batch=t.batch,
+            quantity=-t.quantity, unit_cost=t.unit_cost,
+        )
 
     # Advance the prescription's fulfilment status when fully dispensed.
     if drug_order is not None and drug_order.quantity_dispensed >= drug_order.quantity:
@@ -82,11 +131,23 @@ def reverse_dispense(dispense, *, provider=None, note=""):
             f"Dispense is {dispense.get_status_display()}; only a dispensed item can be returned."
         )
 
-    inventory_services.return_to_stock(
-        product=dispense.product, location=dispense.location, quantity=dispense.quantity,
-        unit_cost=dispense.unit_price, reference_type="DISPENSE_RETURN",
-        reference_id=str(dispense.pk), note=note or "Dispense reversed",
-    )
+    batch_lines = list(dispense.batch_lines.select_related("batch"))
+    if batch_lines:
+        # Restock each originating batch exactly (traceable reversal).
+        for line in batch_lines:
+            inventory_services.return_to_stock(
+                product=dispense.product, location=dispense.location, quantity=line.quantity,
+                unit_cost=line.unit_cost, batch_number=line.batch.batch_number,
+                expiry_date=line.batch.expiry_date, reference_type="DISPENSE_RETURN",
+                reference_id=str(dispense.pk), note=note or "Dispense reversed",
+            )
+    else:
+        # Legacy dispenses without batch lines: restock to the default batch.
+        inventory_services.return_to_stock(
+            product=dispense.product, location=dispense.location, quantity=dispense.quantity,
+            unit_cost=dispense.unit_price, reference_type="DISPENSE_RETURN",
+            reference_id=str(dispense.pk), note=note or "Dispense reversed",
+        )
     dispense.status = Dispense.Status.RETURNED
     dispense.save(update_fields=["status"])
 

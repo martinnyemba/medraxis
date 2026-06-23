@@ -138,6 +138,7 @@ export function NewPrescriptionPage() {
                       {a.allergen}
                       {a.severity ? ` — ${a.severity.toLowerCase()}` : ""}
                       {a.reaction ? ` (${a.reaction})` : ""}
+                      {a.match_reason !== "exact" ? ` [${a.match_reason} match]` : ""}
                     </li>
                   ))}
                 </ul>

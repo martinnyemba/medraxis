@@ -90,11 +90,20 @@ baseline (0 errors).
 
 ## 5. Recommended next steps (prioritised)
 
+**Done in a follow-up pass:**
+
+- ✅ **Class-level allergy cross-reactivity** — `check_drug_allergies` now matches
+  at three levels: *exact* (allergen == drug concept), *ingredient* (allergen is
+  an ingredient of a combination product, via `DrugIngredient`), and *class*
+  (allergen is a drug-class concept set containing the product's concept, via
+  `ConceptSetMembership`). Each match carries a `match_reason` surfaced in the UI.
+- ✅ **Batch traceability per dispense** — a `DispenseBatch` records each
+  (batch, quantity, cost) a FEFO dispense drew from; `reverse_dispense` restocks
+  the *exact* originating batches (legacy dispenses fall back to the default
+  batch).
+
 **Needs modest backend:**
 
-- **Batch traceability per dispense**: record the batch(es) a dispense drew from
-  (a `DispenseLine`/`batch` link) so reversal restocks the *exact* batch and
-  recalls are precise. Today reversal restocks to the default batch.
 - **Refill tracking**: count dispenses/refills against `num_refills` and block
   over-dispensing beyond `quantity × (1 + num_refills)`.
 - **Dispense → charge**: optionally create a POS `SaleLine`/charge on dispense so

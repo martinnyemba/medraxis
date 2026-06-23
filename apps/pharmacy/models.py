@@ -100,3 +100,24 @@ class Dispense(TimeStampedModel):
     @property
     def line_total(self):
         return self.quantity * self.unit_price
+
+
+class DispenseBatch(models.Model):
+    """Which stock batch(es) a dispense drew from.
+
+    FEFO issuing can split one dispense across several batches; recording each
+    (batch, quantity) makes the dispense traceable for recalls and lets a
+    reversal restock the exact originating batch.
+    """
+
+    dispense = models.ForeignKey(
+        Dispense, on_delete=models.CASCADE, related_name="batch_lines"
+    )
+    batch = models.ForeignKey(
+        "inventory.StockBatch", on_delete=models.PROTECT, related_name="dispense_lines"
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.quantity} from batch {self.batch_id} (dispense {self.dispense_id})"

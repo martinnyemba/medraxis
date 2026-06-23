@@ -21,6 +21,7 @@ def _allergy_payload(allergies):
             "allergen": a.allergen.name if a.allergen_id else "",
             "severity": a.severity,
             "reaction": a.reaction,
+            "match_reason": getattr(a, "match_reason", "exact"),
         }
         for a in allergies
     ]
