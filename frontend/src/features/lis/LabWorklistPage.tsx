@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Pagination } from "@/components/common/Pagination";
 import { EmptyState, ErrorState } from "@/components/common/states";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { LisTabs } from "./components/LisTabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/spinner";
@@ -67,6 +68,8 @@ export function LabWorklistPage() {
           </Button>
         }
       />
+
+      <LisTabs />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Select

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ClipboardCheck, Send } from "lucide-react";
+import { CheckCheck, ClipboardCheck, Send, Sparkles } from "lucide-react";
 import { lisApi } from "../api";
 import { useConcept } from "../queries";
 import type { LabResult } from "../types";
@@ -83,7 +83,22 @@ export function ResultRow({ result, orderId }: { result: LabResult; orderId: num
     onError,
   });
 
-  const busy = enter.isPending || verify.isPending || release.isPending;
+  // Run the configured auto-verification rule (range/critical/delta gates) and
+  // fire any reflex order. No-op unless a rule is configured for the test.
+  const autoVerify = useMutation({
+    mutationFn: () => lisApi.autoVerifyResult(result.id),
+    onSuccess: (res) => {
+      toast({
+        title: res.auto_verified ? "Auto-verified" : "Held for manual review",
+        description: res.reflex_order ? `Reflex order ${res.reflex_order} created.` : undefined,
+        variant: res.auto_verified ? "success" : "default",
+      });
+      invalidate();
+    },
+    onError,
+  });
+
+  const busy = enter.isPending || verify.isPending || release.isPending || autoVerify.isPending;
   const flag = result.flag ? FLAG_LABELS[result.flag] : null;
 
   return (
@@ -137,10 +152,22 @@ export function ResultRow({ result, orderId }: { result: LabResult; orderId: num
           </Button>
         )}
         {result.status === "ENTERED" && (
-          <Button size="sm" variant="outline" onClick={() => verify.mutate()} disabled={busy}>
-            {verify.isPending ? <Spinner className="size-3" /> : <CheckCheck className="size-3" />}
-            Verify
-          </Button>
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => autoVerify.mutate()}
+              disabled={busy}
+              title="Run the auto-verification rule (range/critical/delta) and any reflex order"
+            >
+              {autoVerify.isPending ? <Spinner className="size-3" /> : <Sparkles className="size-3" />}
+              Auto
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => verify.mutate()} disabled={busy}>
+              {verify.isPending ? <Spinner className="size-3" /> : <CheckCheck className="size-3" />}
+              Verify
+            </Button>
+          </div>
         )}
         {result.status === "VERIFIED" && (
           <Button size="sm" onClick={() => release.mutate()} disabled={busy}>

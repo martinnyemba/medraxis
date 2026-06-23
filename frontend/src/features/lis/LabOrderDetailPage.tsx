@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, ListChecks } from "lucide-react";
 import { lisApi } from "./api";
-import { useLabTests } from "./queries";
+import { useLabSections, useLabTests } from "./queries";
 import { ApiError } from "@/lib/api/types";
 import { openAuthenticatedFile } from "@/lib/api/client";
 import { formatDateTime } from "@/lib/format";
@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/table";
 import { SpecimenPanel } from "./components/SpecimenPanel";
 import { ResultRow } from "./components/ResultRow";
+import { ReportDeliveryPanel } from "./components/ReportDeliveryPanel";
+import { MicrobiologyPanel } from "./components/MicrobiologyPanel";
 
 export function LabOrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -30,6 +32,7 @@ export function LabOrderDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const tests = useLabTests();
+  const sections = useLabSections();
 
   const order = useQuery({
     queryKey: ["lab-order", id],
@@ -63,6 +66,9 @@ export function LabOrderDetailPage() {
   const o = order.data;
   const test = tests.data?.byId.get(o.lab_test);
   const resultRows = results.data?.results ?? [];
+  const sectionName =
+    sections.data?.find((s) => s.id === test?.section)?.name?.toLowerCase() ?? "";
+  const isMicrobiology = sectionName.includes("micro");
 
   return (
     <div className="space-y-6">
@@ -154,6 +160,10 @@ export function LabOrderDetailPage() {
           </p>
         </CardContent>
       </Card>
+
+      {isMicrobiology && <MicrobiologyPanel orderId={id} />}
+
+      <ReportDeliveryPanel orderId={id} />
     </div>
   );
 }

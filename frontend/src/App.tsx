@@ -24,6 +24,8 @@ const LabWorklistPage = named(() => import("@/features/lis/LabWorklistPage"), "L
 const NewLabOrderPage = named(() => import("@/features/lis/NewLabOrderPage"), "NewLabOrderPage");
 const LabOrderDetailPage = named(() => import("@/features/lis/LabOrderDetailPage"), "LabOrderDetailPage");
 const TestCatalogPage = named(() => import("@/features/lis/TestCatalogPage"), "TestCatalogPage");
+const QcPage = named(() => import("@/features/lis/QcPage"), "QcPage");
+const LabPartnersPage = named(() => import("@/features/lis/LabPartnersPage"), "LabPartnersPage");
 const SalesListPage = named(() => import("@/features/pos/SalesListPage"), "SalesListPage");
 const NewSalePage = named(() => import("@/features/pos/NewSalePage"), "NewSalePage");
 const SaleDetailPage = named(() => import("@/features/pos/SaleDetailPage"), "SaleDetailPage");
@@ -97,6 +99,8 @@ export default function App() {
                       <Route path="orders/new" element={<NewLabOrderPage />} />
                       <Route path="orders/:orderId" element={<LabOrderDetailPage />} />
                       <Route path="catalog" element={<TestCatalogPage />} />
+                      <Route path="qc" element={<QcPage />} />
+                      <Route path="partners" element={<LabPartnersPage />} />
                     </Routes>
                   </Suspense>
                 }
