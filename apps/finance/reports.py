@@ -9,7 +9,7 @@ receivables/payables across parties. All figures are scoped to the active tenant
 from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Sum
+from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.utils import timezone
 
 from apps.finance.models import (
@@ -18,6 +18,7 @@ from apps.finance.models import (
     PartyLedgerEntry,
     SupplierPayment,
 )
+from apps.inventory.models import StockTransaction
 from apps.pos.models import Payment, Sale
 
 ZERO = Decimal("0")
@@ -44,8 +45,40 @@ def business_summary(organization, date_from, date_to):
         Sale.objects.exclude(status__in=[Sale.Status.DRAFT, Sale.Status.VOID]),
         organization,
     ).filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
-    revenue = _d(sales.aggregate(revenue=Sum("grand_total"))["revenue"])
+    sales_totals = sales.aggregate(
+        revenue=Sum("grand_total"),
+        subtotal=Sum("subtotal"),
+        discount=Sum("discount_total"),
+    )
+    revenue = _d(sales_totals["revenue"])
+    # Net sales (the P&L revenue line) excludes tax: subtotal minus discount.
+    net_sales = _d(sales_totals["subtotal"]) - _d(sales_totals["discount"])
     sales_count = sales.count()
+
+    # Cost of goods sold from the stock ledger: SALE rows carry a negative
+    # quantity at the issuing batch's cost, so COGS = -(sum(quantity * cost)).
+    cogs_qs = StockTransaction.objects.filter(
+        transaction_type=StockTransaction.TxnType.SALE,
+        created_at__date__gte=date_from, created_at__date__lte=date_to,
+    )
+    if organization is not None:
+        cogs_qs = cogs_qs.filter(location__organization=organization)
+    cogs = -_d(
+        cogs_qs.aggregate(
+            total=Sum(
+                ExpressionWrapper(
+                    F("quantity") * F("unit_cost"),
+                    output_field=DecimalField(max_digits=18, decimal_places=2),
+                )
+            )
+        )["total"]
+    )
+    gross_profit = net_sales - cogs
+    gross_margin_percent = (
+        (gross_profit / net_sales * Decimal("100")).quantize(Decimal("0.01"))
+        if net_sales
+        else ZERO
+    )
 
     collected = _d(
         _scope(
@@ -83,6 +116,12 @@ def business_summary(organization, date_from, date_to):
         "date_to": str(date_to),
         "sales_count": sales_count,
         "revenue": str(revenue),
+        "net_sales": str(net_sales),
+        "cogs": str(cogs),
+        "gross_profit": str(gross_profit),
+        "gross_margin_percent": str(gross_margin_percent),
+        # Net profit (P&L): gross profit less operating expenses.
+        "net_profit": str(gross_profit - expenses_total),
         "collected": str(collected),
         "expenses": str(expenses_total),
         "supplier_payments": str(supplier_payments),

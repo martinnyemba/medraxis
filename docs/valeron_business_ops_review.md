@@ -85,8 +85,10 @@ Two Valeron/Vyapar-defining gaps remained:
 Backend — `apps/finance/reports.py` (read-only aggregations, tenant-scoped) and
 `BusinessReportsViewSet` at `/api/v1/finance/reports/`:
 
-- `GET summary/?from=&to=` — sales count, **revenue billed**, **collected**,
-  **expenses** (incl. tax), **supplier payments**, **net cash**, and an
+- `GET summary/?from=&to=` — a full **Profit & Loss**: **net sales** (ex-tax),
+  **COGS** (from the stock ledger), **gross profit** + **gross-margin %**,
+  operating **expenses**, and **net profit**; plus **revenue billed**,
+  **collected**, **supplier payments**, **net cash**, and an
   **expenses-by-category** breakdown.
 - `GET day_book/?date=` — every cash/bank movement on a date with **money in /
   out / net** totals and running balances.
@@ -116,11 +118,15 @@ issues (the New-Quotation effect warning matches the existing New-Sale page).
 - **Account transfer** between financial accounts (a money-out + money-in pair)
   exposed on the accounts page.
 
+**Done since first pass:**
+
+- ✅ **Profit & Loss with COGS** — `reports.summary` now derives COGS from the
+  stock ledger (`StockTransaction` SALE rows × batch cost), giving net sales,
+  gross profit, gross-margin % and net profit. Surfaced as a P&L card on the
+  Reports → Summary tab.
+
 **Needs modest backend:**
 
-- **Profit & Loss** with COGS: extend `reports.summary` to subtract cost of
-  goods sold from the stock ledger (`StockTransaction.unit_cost` on SALE rows)
-  for a true gross-margin figure.
 - **Commission report** for referring doctors (volume × `commission_percent`),
   a flagship Valeron number.
 - **Stock valuation & low-stock** report (on-hand × cost; on-hand ≤

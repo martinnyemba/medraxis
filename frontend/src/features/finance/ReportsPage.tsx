@@ -80,6 +80,36 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
+function PnlRow({
+  label,
+  value,
+  emphasis,
+  accent,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+  accent?: "pos" | "neg";
+}) {
+  return (
+    <div
+      className={
+        "flex justify-between " +
+        (emphasis ? "border-t pt-1.5 font-semibold" : "text-muted-foreground")
+      }
+    >
+      <dt>{label}</dt>
+      <dd
+        className={
+          accent === "neg" ? "text-destructive" : accent === "pos" ? "text-success" : undefined
+        }
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 function SummaryTab() {
   const { current } = useTenant();
   const currency = current?.currency;
@@ -111,19 +141,40 @@ function SummaryTab() {
         <ErrorState error={error} onRetry={refetch} />
       ) : data ? (
         <>
+          {/* Profit & Loss: net sales − COGS = gross profit − expenses = net profit. */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Profit &amp; loss</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="max-w-md space-y-1.5 text-sm">
+                <PnlRow label="Net sales (ex-tax)" value={money(data.net_sales, currency)} />
+                <PnlRow label="Cost of goods sold" value={`(${money(data.cogs, currency)})`} />
+                <PnlRow
+                  label={`Gross profit (${data.gross_margin_percent}%)`}
+                  value={money(data.gross_profit, currency)}
+                  emphasis
+                />
+                <PnlRow label="Operating expenses" value={`(${money(data.expenses, currency)})`} />
+                <PnlRow
+                  label="Net profit"
+                  value={money(data.net_profit, currency)}
+                  emphasis
+                  accent={Number(data.net_profit) < 0 ? "neg" : "pos"}
+                />
+              </dl>
+            </CardContent>
+          </Card>
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Revenue billed" value={money(data.revenue, currency)} />
+            <Stat label="Revenue billed (incl. tax)" value={money(data.revenue, currency)} />
             <Stat label="Collected" value={money(data.collected, currency)} accent="pos" />
-            <Stat label="Expenses" value={money(data.expenses, currency)} accent="neg" />
+            <Stat label="Sales count" value={String(data.sales_count)} />
             <Stat
               label="Net cash"
               value={money(data.net_cash, currency)}
               accent={Number(data.net_cash) < 0 ? "neg" : "pos"}
             />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Stat label="Sales count" value={String(data.sales_count)} />
-            <Stat label="Supplier payments" value={money(data.supplier_payments, currency)} />
           </div>
           <Card>
             <CardHeader>

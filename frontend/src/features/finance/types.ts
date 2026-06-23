@@ -132,6 +132,11 @@ export interface BusinessSummary {
   date_to: string;
   sales_count: number;
   revenue: string;
+  net_sales: string;
+  cogs: string;
+  gross_profit: string;
+  gross_margin_percent: string;
+  net_profit: string;
   collected: string;
   expenses: string;
   supplier_payments: string;
