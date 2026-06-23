@@ -2,9 +2,12 @@ import { api } from "@/lib/api/client";
 import type { Paginated } from "@/lib/api/types";
 import type {
   AccountTransaction,
+  BusinessSummary,
+  DayBook,
   Expense,
   ExpenseCategory,
   FinancialAccount,
+  Outstanding,
   PartyStatement,
   PartyType,
   PurchaseBill,
@@ -53,4 +56,11 @@ export const financeApi = {
     api.get<PartyStatement>("/finance/party-ledger/statement/", {
       party_type: partyType, party_id: partyId,
     }),
+
+  // Business reports -------------------------------------------------------
+  reportSummary: (params?: { from?: string; to?: string }) =>
+    api.get<BusinessSummary>("/finance/reports/summary/", params),
+  reportDayBook: (date?: string) =>
+    api.get<DayBook>("/finance/reports/day_book/", date ? { date } : undefined),
+  reportOutstanding: () => api.get<Outstanding>("/finance/reports/outstanding/"),
 };

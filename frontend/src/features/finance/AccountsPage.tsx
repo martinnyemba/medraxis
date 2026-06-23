@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, FileText, HandCoins, Landmark, Plus, Receipt } from "lucide-react";
+import { BarChart3, BookOpen, FileText, HandCoins, Landmark, Plus, Receipt } from "lucide-react";
 import { financeApi } from "./api";
 import type { AccountType, FinancialAccount } from "./types";
 import { ApiError } from "@/lib/api/types";
@@ -82,6 +82,11 @@ export function AccountsPage() {
             <Button asChild variant="outline">
               <Link to="/finance/party-ledger">
                 <BookOpen className="size-4" /> Party ledger
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/finance/reports">
+                <BarChart3 className="size-4" /> Reports
               </Link>
             </Button>
             <AccountDialog />

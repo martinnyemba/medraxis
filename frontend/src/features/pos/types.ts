@@ -120,3 +120,55 @@ export interface SalesReturnCreateInput {
   restock?: boolean;
   lines: SalesReturnLine[];
 }
+
+// --- Quotations / estimates (Vyapar-style estimate → invoice) --------------
+
+export type QuotationStatus =
+  | "DRAFT"
+  | "SENT"
+  | "ACCEPTED"
+  | "CONVERTED"
+  | "EXPIRED"
+  | "REJECTED";
+
+export interface QuotationLine {
+  id?: number;
+  line_type: LineType;
+  product?: number | null;
+  lab_test?: number | null;
+  test_profile?: number | null;
+  billable_service?: number | null;
+  description: string;
+  quantity: string;
+  unit_price?: string;
+  discount_percent?: string;
+  tax_percent?: string;
+}
+
+export interface Quotation {
+  id: number;
+  quotation_number: string;
+  customer: number | null;
+  client: number | null;
+  patient: number | null;
+  location: number | null;
+  status: QuotationStatus;
+  valid_until: string | null;
+  subtotal: string;
+  discount_total: string;
+  tax_total: string;
+  grand_total: string;
+  converted_sale: number | null;
+  note: string;
+  lines: QuotationLine[];
+  created_at: string;
+}
+
+export interface QuotationCreateInput {
+  customer?: number | null;
+  patient?: number | null;
+  location?: number | null;
+  valid_until?: string | null;
+  note?: string;
+  lines: QuotationLine[];
+}
