@@ -132,7 +132,7 @@ function AddNameDialog({ personId }: { personId: number }) {
           <DialogTitle>Add a name</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name-given">Given name *</Label>
               <Input id="name-given" value={givenName} onChange={(e) => setGivenName(e.target.value)} />
@@ -397,7 +397,7 @@ function AddAddressDialog({ personId }: { personId: number }) {
             <Label htmlFor="addr2">Address line 2</Label>
             <Input id="addr2" value={address2} onChange={(e) => setAddress2(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="addr-city">City / Village</Label>
               <Input id="addr-city" value={cityVillage} onChange={(e) => setCityVillage(e.target.value)} />
@@ -407,7 +407,7 @@ function AddAddressDialog({ personId }: { personId: number }) {
               <Input id="addr-state" value={stateProvince} onChange={(e) => setStateProvince(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="addr-country">Country</Label>
               <Input id="addr-country" value={country} onChange={(e) => setCountry(e.target.value)} />

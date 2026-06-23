@@ -178,7 +178,7 @@ function CreateAllergyDialog({ patientId }: { patientId: number }) {
             <ConceptPicker label="Allergen *" placeholder="Search allergens…" onSelect={setAllergen} />
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Category</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as AllergyCategory)}>
@@ -350,7 +350,7 @@ function CreateConditionDialog({ patientId }: { patientId: number }) {
             <ConceptPicker label="Condition *" placeholder="Search conditions…" onSelect={setConcept} />
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Clinical status</Label>
               <Select
@@ -501,7 +501,7 @@ function CreateDiagnosisDialog({ patientId }: { patientId: number }) {
             <ConceptPicker label="Diagnosis *" placeholder="Search diagnoses…" onSelect={setConcept} />
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Certainty</Label>
               <Select value={certainty} onValueChange={(v) => setCertainty(v as DiagnosisCertainty)}>

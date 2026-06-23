@@ -46,8 +46,8 @@ export function PatientDetailPage() {
       </Button>
 
       <Card className="mb-6">
-        <CardContent className="flex flex-wrap items-center gap-6 pt-6">
-          <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
+        <CardContent className="flex flex-wrap items-center gap-3 pt-6 sm:gap-6">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary sm:size-16 sm:text-xl">
             {patientName(patient)
               .split(" ")
               .map((p) => p[0])
@@ -56,15 +56,15 @@ export function PatientDetailPage() {
               .toUpperCase()}
           </div>
           <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">{patientName(patient)}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{patientName(patient)}</h1>
               {patient.voided ? (
                 <Badge variant="destructive">Voided</Badge>
               ) : (
                 <Badge variant="success">Active</Badge>
               )}
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground sm:gap-x-6">
               <span className="flex items-center gap-1.5">
                 <IdCard className="size-4" />
                 <span className="font-mono">{preferredIdentifier(patient) ?? "—"}</span>
