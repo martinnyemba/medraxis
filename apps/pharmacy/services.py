@@ -120,6 +120,32 @@ def dispense(*, product, location, quantity, patient=None, drug_order=None,
 
 
 @transaction.atomic
+def record_pos_dispense(*, sale, product, location, quantity, unit_price, txns,
+                        patient=None, provider=None):
+    """Record a clinical dispense for a medicine sold over the counter at POS.
+
+    The stock has *already* moved as the sale's ledger row, so this does **not**
+    issue stock again -- it creates the dispensing record (with batch
+    traceability copied from ``txns``) so controlled/medicinal products that
+    leave via the till are auditable. Reversal is via the sales-return flow.
+    """
+    event = Dispense.objects.create(
+        sale=sale, patient=patient, product=product, location=location,
+        quantity=quantity, unit_price=unit_price, dispensed_by=provider,
+        note=f"POS sale {sale.invoice_number}",
+    )
+    for t in txns:
+        DispenseBatch.objects.create(
+            dispense=event, batch=t.batch, quantity=-t.quantity, unit_cost=t.unit_cost,
+        )
+    audit_services.record(
+        AuditLog.Action.CREATE, instance=event, actor=provider,
+        description=f"OTC dispense {quantity} {product.sku} via {sale.invoice_number}",
+    )
+    return event
+
+
+@transaction.atomic
 def reverse_dispense(dispense, *, provider=None, note=""):
     """Reverse a dispense: return the stock and mark the event RETURNED.
 
@@ -129,6 +155,10 @@ def reverse_dispense(dispense, *, provider=None, note=""):
     if dispense.status != Dispense.Status.DISPENSED:
         raise DispenseReversalError(
             f"Dispense is {dispense.get_status_display()}; only a dispensed item can be returned."
+        )
+    if dispense.sale_id:
+        raise DispenseReversalError(
+            "This dispense was made through a POS sale; reverse it with a sales return."
         )
 
     batch_lines = list(dispense.batch_lines.select_related("batch"))

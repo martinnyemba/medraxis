@@ -11,6 +11,10 @@ from apps.inventory.models import StockTransaction
 from apps.pos.models import Payment, Sale, SaleLine
 
 
+class SaleFulfillmentError(Exception):
+    """Raised when a sale cannot be fulfilled (e.g. a lab line without a patient)."""
+
+
 def next_invoice_number():
     today = timezone.now().strftime("%Y%m%d")
     count = Sale.objects.filter(invoice_number__startswith=f"INV-{today}").count()
@@ -54,13 +58,27 @@ def complete_sale(sale: Sale):
     """
     for line in sale.lines.select_for_update():
         if line.line_type == SaleLine.LineType.PRODUCT and line.product_id and not line.issued_stock:
-            inventory_services.issue_stock(
+            txns = inventory_services.issue_stock(
                 product=line.product, location=sale.location, quantity=line.quantity,
                 transaction_type=StockTransaction.TxnType.SALE,
                 reference_type="SALE", reference_id=sale.invoice_number,
             )
+            # A medicine sold over the counter gets a clinical dispensing record
+            # (controlled-drug traceability) without moving stock a second time.
+            if line.product.is_drug:
+                from apps.pharmacy.services import record_pos_dispense
+                record_pos_dispense(
+                    sale=sale, product=line.product, location=sale.location,
+                    quantity=line.quantity, unit_price=line.unit_price, txns=txns,
+                    patient=sale.patient,
+                )
             line.issued_stock = True
             line.save(update_fields=["issued_stock"])
+        elif line.line_type in (SaleLine.LineType.LAB_TEST, SaleLine.LineType.LAB_PROFILE) \
+                and not line.fulfilled:
+            _fulfil_lab_line(sale, line)
+            line.fulfilled = True
+            line.save(update_fields=["fulfilled"])
 
     sale.recalculate()
     sale.status = Sale.Status.COMPLETED
@@ -87,6 +105,63 @@ def complete_sale(sale: Sale):
     sale.save()
     audit_services.record(AuditLog.Action.UPDATE, instance=sale, description="sale completed")
     return sale
+
+
+def _fulfil_lab_line(sale: Sale, line: SaleLine):
+    """Open the lab workflow for a billed LAB_TEST / LAB_PROFILE sale line.
+
+    Creates a LIS ``TestOrder`` (one per test; a profile expands to its member
+    tests) on the sale's patient plus a specimen shell, so a walk-in who buys a
+    test at the counter immediately appears on the lab worklist. Requires a
+    patient -- results post to the patient chart.
+    """
+    if sale.patient_id is None:
+        raise SaleFulfillmentError(
+            "A patient is required to fulfil lab tests; attach a patient to the sale."
+        )
+
+    from apps.emr.models import OrderType
+    from apps.emr.services import next_order_number
+    from apps.lis import services as lis_services
+    from apps.lis.models import LabTest, Specimen, TestOrder
+
+    if line.line_type == SaleLine.LineType.LAB_TEST:
+        tests = [line.lab_test] if line.lab_test_id else []
+    else:  # LAB_PROFILE -> each member test
+        tests = list(
+            LabTest.objects.filter(profile_memberships__profile=line.test_profile)
+        ) if line.test_profile_id else []
+
+    order_type = OrderType.objects.filter(name="Test Order").first()
+    org = getattr(sale, "organization", None)
+    for lab_test in tests:
+        # Idempotency guard: skip if this sale already opened an order for the test.
+        if TestOrder.objects.filter(
+            patient_id=sale.patient_id, lab_test=lab_test,
+            fulfiller_comment=f"POS sale {sale.invoice_number}",
+        ).exists():
+            continue
+        order = TestOrder.objects.create(
+            order_number=next_order_number(),
+            order_type=order_type,
+            concept=lab_test.concept,
+            patient_id=sale.patient_id,
+            lab_test=lab_test,
+            specimen_source=lab_test.specimen_type,
+            date_activated=timezone.now(),
+            fulfiller_comment=f"POS sale {sale.invoice_number}",
+            organization=org,
+        )
+        # A specimen shell so the order is ready to collect on the lab worklist
+        # (only when the test defines a specimen type; else the lab accessions it).
+        if lab_test.specimen_type_id is not None:
+            specimen = Specimen.objects.create(
+                accession_number=lis_services.next_accession_number(),
+                patient_id=sale.patient_id,
+                specimen_type=lab_test.specimen_type,
+                organization=org,
+            )
+            specimen.orders.add(order)
 
 
 @transaction.atomic

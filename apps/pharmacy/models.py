@@ -73,6 +73,11 @@ class Dispense(TimeStampedModel):
     drug_order = models.ForeignKey(
         DrugOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name="dispenses"
     )
+    # A POS sale that produced this dispense (over-the-counter medicine sale).
+    # Its reversal is governed by the sales-return flow, not dispense reversal.
+    sale = models.ForeignKey(
+        "pos.Sale", on_delete=models.SET_NULL, null=True, blank=True, related_name="dispenses"
+    )
     patient = models.ForeignKey(
         "emr.Patient", on_delete=models.PROTECT, related_name="dispenses", null=True, blank=True
     )

@@ -144,6 +144,11 @@ class SaleLine(models.Model):
     issued_stock = models.BooleanField(
         default=False, help_text="True once this line has drawn down inventory."
     )
+    fulfilled = models.BooleanField(
+        default=False,
+        help_text="True once a non-stock line has been fulfilled (e.g. a lab "
+                  "test order created for a LAB_TEST/LAB_PROFILE line).",
+    )
 
     class Meta:
         indexes = [models.Index(fields=["sale"])]
