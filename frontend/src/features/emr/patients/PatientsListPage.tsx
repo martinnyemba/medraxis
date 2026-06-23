@@ -67,7 +67,7 @@ export function PatientsListPage() {
         }
       />
 
-      <div className="mb-4 relative max-w-md">
+      <div className="mb-4 relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search by name or identifier…"

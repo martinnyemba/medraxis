@@ -12,21 +12,22 @@ export function OrgSwitcher() {
   const { organizations, current, setCurrent, isLoading } = useTenant();
 
   if (isLoading) {
-    return <div className="h-9 w-44 animate-pulse rounded-md bg-muted" />;
+    return <div className="h-9 w-28 animate-pulse rounded-md bg-muted sm:w-44" />;
   }
   if (organizations.length === 0) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Building2 className="size-4" /> No facility
+        <Building2 className="size-4" />
+        <span className="hidden sm:inline">No facility</span>
       </div>
     );
   }
 
   return (
     <Select value={current?.slug ?? undefined} onValueChange={setCurrent}>
-      <SelectTrigger className="w-52">
+      <SelectTrigger className="w-28 sm:w-52">
         <span className="flex items-center gap-2 truncate">
-          <Building2 className="size-4 text-muted-foreground" />
+          <Building2 className="size-4 shrink-0 text-muted-foreground" />
           <SelectValue placeholder="Select facility" />
         </span>
       </SelectTrigger>
